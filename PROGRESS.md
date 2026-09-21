@@ -10,16 +10,23 @@
   - Docs: README, ARCHITECTURE, GAME_DESIGN, PERFORMANCE
   - Verified: `npm run dev` serves, `npm run lint`, `npm test` and `npm run build` pass
 
+- **Phase 1 — 3D world** (branch `phase-1-world`)
+  - City data format (`src/cities/types.ts`), deterministic demo city generator in that format
+  - Render builders: buildings merged into one geometry, road/sidewalk ribbons, flat area fills,
+    instanced trees. Whole city = **10 draw calls, ~26k triangles**
+  - 2D geometry utils + PRNG with tests; browser smoke harness (`npm run smoke`, real Chrome)
+
 ## In progress
 
-Nothing. Waiting for approval to start Phase 1.
+Nothing.
 
 ## Next
 
-- Phase 1 — 3D world: scene, lighting, ground, buildings, roads, trees (hand-made test block)
+- Phase 2 — player: WASD/run/jump, third-person camera, collision, bounds
 
 ## Known issues
 
 - React pinned to 19.2.x due to R3F peer range (see ARCHITECTURE.md).
-- Git repo not yet connected to GitHub, and Cloudflare Pages not yet set up (needs user's accounts).
-- Placeholder canvas (plane + box) not yet checked visually in a real browser.
+- Cloudflare Pages not yet connected (needs the user's Cloudflare account).
+- Ground plane ends 200 m past the map edge; hidden by fog for now, a proper boundary comes in Phase 2.
+- Camera is a temporary free orbit camera until Phase 2.

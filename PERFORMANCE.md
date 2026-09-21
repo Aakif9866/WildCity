@@ -23,3 +23,8 @@ Targets: 60 FPS on modern desktop, usable on mid-range phones. Measure before op
 
 Instancing, shared materials/geometry, Draco/Meshopt, frustum culling, LOD, object pooling,
 minimal shadows. Set `VITE_DEBUG_STATS=true` for an FPS overlay once implemented (Phase 10).
+
+## Phase 1 (demo city, 500 m square)
+
+10 draw calls, ~26k triangles, 10 geometries, 0 textures (measured via `window.__wildcity.renderInfo()`).
+JS gzip: app 113 KB, three 192 KB.

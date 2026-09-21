@@ -11,7 +11,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc -b",
+    "smoke": "npm run build && node scripts/smoke.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.8",
@@ -34,6 +35,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
     "globals": "^17.12.0",
+    "playwright-core": "^1.63.0",
     "prettier": "^3.9.8",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",

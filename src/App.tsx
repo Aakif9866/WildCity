@@ -7,7 +7,7 @@ export default function App() {
 
   return (
     <div className="relative h-full w-full">
-      <GameCanvas />
+      {phase !== 'menu' && <GameCanvas />}
       {phase === 'menu' && <MainMenu />}
     </div>
   )
