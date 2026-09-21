@@ -61,7 +61,7 @@ function Roads({ city }: { city: CityData }) {
       )}
       {asphalt && (
         <mesh geometry={asphalt}>
-          <meshLambertMaterial color="#3d4047" polygonOffset polygonOffsetFactor={-3} />
+          <meshLambertMaterial color="#525861" polygonOffset polygonOffsetFactor={-3} />
         </mesh>
       )}
     </>

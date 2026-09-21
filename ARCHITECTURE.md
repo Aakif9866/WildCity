@@ -28,6 +28,15 @@ Everything runs client-side. No backend, database or auth in the MVP.
 
 Most `game/` folders are empty placeholders until their phase.
 
+## Frame loop (Phase 2)
+
+`PlayerController` (render) -> `input.poll()` -> `stepPlayer` (game/player) -> `updateCameraRig`
+(game/camera) -> write Three camera. Rules live in `game/`; the component only wires them to
+`useFrame`. `GameSession` (game/session.ts) holds the mutable per-frame state outside React.
+
+`World` (game/world) is the single query layer: `resolveCircle` (collision), `zoneAt`, `freeDistance`
+(camera clearance), `heightAt` (terrain hook, flat for now).
+
 ## Key decisions
 
 - **Simulation outside React.** Per-frame state (player, animals) lives in plain modules/refs and is

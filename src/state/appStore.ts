@@ -7,9 +7,13 @@ export type AppPhase = 'menu' | 'loading' | 'playing' | 'paused'
 interface AppState {
   phase: AppPhase
   setPhase: (phase: AppPhase) => void
+  pause: () => void
+  resume: () => void
 }
 
-export const useAppStore = create<AppState>((set) => ({
+export const useAppStore = create<AppState>((set, get) => ({
   phase: 'menu',
   setPhase: (phase) => set({ phase }),
+  pause: () => get().phase === 'playing' && set({ phase: 'paused' }),
+  resume: () => get().phase === 'paused' && set({ phase: 'playing' }),
 }))

@@ -28,3 +28,7 @@ minimal shadows. Set `VITE_DEBUG_STATS=true` for an FPS overlay once implemented
 
 10 draw calls, ~26k triangles, 10 geometries, 0 textures (measured via `window.__wildcity.renderInfo()`).
 JS gzip: app 113 KB, three 192 KB.
+
+## Phase 2
+
+23 draw calls (city 10 + player 4 + boundary 4 + misc), ~26k triangles. Movement/collision cost is negligible (grid lookups).

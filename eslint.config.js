@@ -17,6 +17,9 @@ export default tseslint.config(
       prettier,
     ],
     languageOptions: { ecmaVersion: 2023, globals: globals.browser },
-    rules: { '@typescript-eslint/no-explicit-any': 'error' },
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+    },
   },
 )

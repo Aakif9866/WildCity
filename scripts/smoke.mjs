@@ -65,6 +65,124 @@ try {
   check('canvas renders geometry', !!info && info.triangles > 1000, JSON.stringify(info))
   check('draw calls stay low', !!info && info.calls > 0 && info.calls < 40, `calls=${info?.calls}`)
 
+  // ---- Phase 2: player ----
+  const P = () =>
+    page.evaluate(() => {
+      const { player, camera, world } = window.__wildcity.session
+      return {
+        x: player.x,
+        y: player.y,
+        z: player.z,
+        cx: camera.px,
+        cy: camera.py,
+        cz: camera.pz,
+        inB: !!world.buildingAt(player.x, player.z),
+      }
+    })
+  const hold = async (keys, ms) => {
+    for (const k of keys) await page.keyboard.down(k)
+    await sleep(ms)
+    for (const k of keys.slice().reverse()) await page.keyboard.up(k)
+  }
+  const teleport = (x, z, yaw) =>
+    page.evaluate(
+      ([x, z, yaw]) => {
+        const { player, camera } = window.__wildcity.session
+        player.x = x
+        player.z = z
+        player.vx = player.vz = 0
+        camera.yaw = yaw
+      },
+      [x, z, yaw],
+    )
+
+  const p0 = await P()
+  check(
+    'spawns near the configured spawn point',
+    Math.abs(p0.x) < 1 && Math.abs(p0.z - 20) < 1,
+    JSON.stringify(p0),
+  )
+  await hold(['KeyW'], 1200)
+  const p1 = await P()
+  check('W walks the player forward', p1.z < p0.z - 2, `dz=${(p1.z - p0.z).toFixed(1)}`)
+
+  await teleport(0, 100, 0)
+  await hold(['KeyW'], 1000)
+  const walkD = 100 - (await P()).z
+  await teleport(0, 100, 0)
+  await hold(['ShiftLeft', 'KeyW'], 1000)
+  const runD = 100 - (await P()).z
+  check(
+    'Shift makes the player run faster',
+    runD > walkD * 1.3,
+    `walk=${walkD.toFixed(1)} run=${runD.toFixed(1)}`,
+  )
+
+  await teleport(0, 100, 0)
+  await sleep(300)
+  await page.keyboard.down('Space')
+  await sleep(250)
+  const airborne = await P()
+  await page.keyboard.up('Space')
+  await sleep(1200)
+  const landed = await P()
+  check(
+    'Space jumps and player lands back on ground',
+    airborne.y > 0.5 && landed.y === 0,
+    `peak~${airborne.y.toFixed(2)} end=${landed.y}`,
+  )
+
+  // Run straight at the first building from the west; must stop at its wall.
+  const wall = await page.evaluate(() => {
+    const b = window.__wildcity.session.city.buildings.find((b) => b.height > 10)
+    const xs = b.footprint.map((p) => p[0]),
+      zs = b.footprint.map((p) => p[1])
+    return { minX: Math.min(...xs), z: (Math.min(...zs) + Math.max(...zs)) / 2 }
+  })
+  await teleport(wall.minX - 6, wall.z, -Math.PI / 2)
+  let inside = false
+  const tRun = Date.now()
+  await page.keyboard.down('ShiftLeft')
+  await page.keyboard.down('KeyW')
+  while (Date.now() - tRun < 2500) {
+    const pp = await P()
+    if (pp.inB) inside = true
+    await sleep(60)
+  }
+  await page.keyboard.up('KeyW')
+  await page.keyboard.up('ShiftLeft')
+  const atWall = await P()
+  check(
+    'player cannot walk through a building',
+    !inside && atWall.x <= wall.minX,
+    `x=${atWall.x.toFixed(2)} wallX=${wall.minX.toFixed(2)}`,
+  )
+  const camInside = await page.evaluate(() => {
+    const { camera, world } = window.__wildcity.session
+    return world.isSolidAt(camera.px, camera.py, camera.pz)
+  })
+  check('camera does not clip into buildings', !camInside)
+  await page.screenshot({ path: `${OUT}/phase2-wall.png` })
+
+  await teleport(240, 0, -Math.PI / 2)
+  await hold(['ShiftLeft', 'KeyW'], 2000)
+  const edge = await P()
+  check('player stays inside the map bounds', Math.abs(edge.x) <= 250, `x=${edge.x.toFixed(1)}`)
+
+  await teleport(0, 20, 0)
+  await sleep(1200)
+  await page.screenshot({ path: `${OUT}/phase2-play.png` })
+
+  await page.keyboard.press('Escape')
+  await sleep(200)
+  check('Escape opens the pause menu', await page.getByText('PAUSED').isVisible())
+  const paused0 = await P()
+  await hold(['KeyW'], 500)
+  check('player does not move while paused', Math.abs((await P()).z - paused0.z) < 0.01)
+  await page.getByRole('button', { name: 'Resume' }).click()
+  await sleep(200)
+  check('Resume closes the pause menu', !(await page.getByText('PAUSED').isVisible()))
+
   check('no console/page errors', errors.length === 0, errors.slice(0, 3).join(' | '))
   void PHASE
 } finally {
