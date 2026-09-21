@@ -42,3 +42,9 @@ Weather, discovery system, audio, mobile controls, vehicles, quests, saves, mult
 - Press E within 5 m: panel with energy, hunger, mood, state and Observe / Follow / Interact.
   Interact succeeds for trusting individuals; shy ones retreat; sleeping ones are left alone.
 - Follow: the camera tracks the animal until you press F or move.
+
+## Cities (implemented)
+
+Search the city list, pick with mouse or keyboard, Explore. Each city is a ~700 m square of real
+OpenStreetMap data chosen for a good mix of streets, buildings, parkland and water. Available:
+Hyderabad, Bengaluru, London, and an offline Demo Town.

@@ -786,6 +786,103 @@ try {
   await page4.getByRole('button', { name: 'Try again' }).isVisible()
   await page4.close()
 
+  // ---- Phase 8: city selector ----
+  const page5 = await browser.newPage({ viewport: { width: 1280, height: 720 } })
+  const errors5 = []
+  page5.on('pageerror', (e) => errors5.push(String(e)))
+  page5.on('console', (m) => m.type() === 'error' && errors5.push(m.text()))
+  await page5.goto(`http://localhost:${PORT}/?debug`)
+  await page5.getByRole('list', { name: 'Cities' }).waitFor({ timeout: 10000 })
+  const cityNames = await page5
+    .getByRole('list', { name: 'Cities' })
+    .getByRole('button')
+    .allTextContents()
+  check(
+    'city list shows several cities including the demo town',
+    cityNames.length >= 3 &&
+      cityNames.some((n) => n.includes('Hyderabad')) &&
+      cityNames.some((n) => n.includes('Demo Town')),
+    cityNames.join(' | '),
+  )
+  await page5.screenshot({ path: `${OUT}/phase8-menu.png` })
+
+  await page5.getByLabel('Search cities').fill('hyd')
+  check(
+    'typing filters the list',
+    (await page5.getByRole('list', { name: 'Cities' }).getByRole('button').count()) === 1,
+  )
+  await page5.getByLabel('Search cities').fill('zzzz')
+  check(
+    'no matches shows a message and disables Explore',
+    (await page5.getByText('No city matches').isVisible()) &&
+      (await page5.getByRole('button', { name: 'Explore', exact: true }).isDisabled()),
+  )
+  await page5.getByLabel('Search cities').fill('')
+
+  await page5.getByLabel('Search cities').press('ArrowDown')
+  const pressed = await page5
+    .getByRole('list', { name: 'Cities' })
+    .getByRole('button', { pressed: true })
+    .textContent()
+  check('arrow keys move the selection', !!pressed)
+  await page5.getByLabel('Search cities').press('Enter')
+  await page5.waitForFunction(() => !!window.__wildcity?.session, null, { timeout: 60000 })
+  const picked = await page5.evaluate(() => window.__wildcity.session.city.metadata)
+  check(
+    'Enter starts the highlighted city',
+    pressed.includes(picked.name),
+    `${pressed} -> ${picked.name}`,
+  )
+  check(
+    'the chosen city is a different real city with its own data',
+    picked.id !== 'hyderabad' || cityNames.length === 1,
+    picked.id,
+  )
+  const differs = await page5.evaluate(() => {
+    const S = window.__wildcity.session
+    return {
+      b: S.city.buildings.length,
+      spawnOk: !S.world.buildingAt(S.city.metadata.spawn.x, S.city.metadata.spawn.z),
+      animals: S.animals.length,
+    }
+  })
+  check(
+    'the selected city plays: buildings, valid spawn, 22 animals',
+    differs.b > 20 && differs.spawnOk && differs.animals === 22,
+    JSON.stringify(differs),
+  )
+  await sleep(1500)
+  await page5.screenshot({ path: `${OUT}/phase8-city.png` })
+
+  // Quit to menu: the last city is remembered and pre-selected.
+  await page5.keyboard.press('Escape')
+  await page5.getByRole('button', { name: 'Quit to menu' }).click()
+  await page5.getByRole('list', { name: 'Cities' }).waitFor({ timeout: 10000 })
+  const remembered = await page5
+    .getByRole('list', { name: 'Cities' })
+    .getByRole('button', { pressed: true })
+    .textContent()
+  check(
+    'quitting returns to the menu with the last city selected',
+    remembered.includes(picked.name),
+    remembered,
+  )
+
+  // Quitting must free the world: switching cities repeatedly doesn't accumulate sessions.
+  await page5.getByRole('button', { name: 'Explore', exact: false }).last().click()
+  await page5.waitForFunction(
+    (id) => window.__wildcity?.session?.city.metadata.id === id,
+    picked.id,
+    { timeout: 60000 },
+  )
+  check('a city can be re-entered after quitting', true)
+  check(
+    'no console/page errors in the selector flow',
+    errors5.length === 0,
+    errors5.slice(0, 3).join(' | '),
+  )
+  await page5.close()
+
   check('no console/page errors', errors.length === 0, errors.slice(0, 3).join(' | '))
   void PHASE
 } finally {

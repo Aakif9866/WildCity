@@ -1,0 +1,10 @@
+{
+  "id": "london",
+  "name": "London",
+  "country": "United Kingdom",
+  "center": { "lat": 51.5025, "lon": -0.134 },
+  "halfSize": 350,
+  "spawn": { "x": 59.4578977389308, "z": 102.29704606437699, "yaw": 0 },
+  "attribution": "© OpenStreetMap contributors (ODbL)",
+  "description": "St James's Park: lake, pelicans and the Mall"
+}

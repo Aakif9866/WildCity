@@ -8,5 +8,25 @@
       "lon": 78.464
     },
     "description": "Necklace Road: the Hussain Sagar lakeshore, parks and city blocks"
+  },
+  {
+    "id": "bengaluru",
+    "name": "Bengaluru",
+    "country": "India",
+    "center": {
+      "lat": 12.9763,
+      "lon": 77.5929
+    },
+    "description": "Cubbon Park: shady green heart of the garden city"
+  },
+  {
+    "id": "london",
+    "name": "London",
+    "country": "United Kingdom",
+    "center": {
+      "lat": 51.5025,
+      "lon": -0.134
+    },
+    "description": "St James's Park: lake, pelicans and the Mall"
   }
 ]

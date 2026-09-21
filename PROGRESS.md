@@ -80,13 +80,22 @@
   - OSM attribution (ODbL) shown in-game
   - 146 unit tests; smoke covers real-city load, collisions, animals, HTTP-500 and offline recovery
 
+- **Phase 8 — City selector** (branch `phase-8-city-selector`)
+  - Menu with live search (`filterCities`: multi-term, accent-insensitive, ranked by name match),
+    keyboard navigation (arrows / Enter), details card (country, coordinates, blurb)
+  - Three real cities built with the same pipeline and zero engine changes: Hyderabad (Necklace
+    Road), Bengaluru (Cubbon Park), London (St James's Park), plus the offline Demo Town
+  - Last city remembered (localStorage, failure-tolerant); `?city=` deep link still wins
+  - Quitting drops the session so worlds don't accumulate
+  - 153 unit tests; smoke covers search, keyboard selection, switching city, remembered choice
+
 ## In progress
 
 Nothing.
 
 ## Next
 
-- Phase 8 — city selector (search/select, metadata, multiple cities)
+- Phase 9 — day/night: sun movement, lighting changes, animal schedules
 
 ## Known issues
 

@@ -1,0 +1,10 @@
+{
+  "id": "bengaluru",
+  "name": "Bengaluru",
+  "country": "India",
+  "center": { "lat": 12.9763, "lon": 77.5929 },
+  "halfSize": 350,
+  "spawn": { "x": -32.119959276964586, "z": -86.4562825245639, "yaw": 0 },
+  "attribution": "© OpenStreetMap contributors (ODbL)",
+  "description": "Cubbon Park: shady green heart of the garden city"
+}

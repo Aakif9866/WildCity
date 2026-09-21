@@ -6,13 +6,31 @@ export type AppPhase = 'menu' | 'loading' | 'playing' | 'paused'
 
 export const DEFAULT_CITY_ID = 'hyderabad'
 
-/** `?city=<id>` deep link, restricted to the same charset the loader accepts. */
+const CITY_ID = /^[a-z0-9-]+$/
+const LAST_CITY_KEY = 'wildcity:lastCity'
+
+/** A `?city=<id>` deep link wins, then the last city played, then the default. */
 function initialCityId(): string {
   try {
-    const id = new URLSearchParams(window.location.search).get('city')
-    return id && /^[a-z0-9-]+$/.test(id) ? id : DEFAULT_CITY_ID
+    const fromUrl = new URLSearchParams(window.location.search).get('city')
+    if (fromUrl && CITY_ID.test(fromUrl)) return fromUrl
   } catch {
-    return DEFAULT_CITY_ID
+    /* no window/location: fall through */
+  }
+  try {
+    const last = window.localStorage.getItem(LAST_CITY_KEY)
+    if (last && CITY_ID.test(last)) return last
+  } catch {
+    /* storage can be blocked (private mode): the menu still works without it */
+  }
+  return DEFAULT_CITY_ID
+}
+
+function rememberCity(id: string): void {
+  try {
+    window.localStorage.setItem(LAST_CITY_KEY, id)
+  } catch {
+    /* ignore */
   }
 }
 
@@ -31,6 +49,7 @@ interface AppState {
   /** Animal being observed (highlight ring). */
   observedId: string | null
   setPhase: (phase: AppPhase) => void
+  selectCity: (cityId: string) => void
   startLoading: (cityId: string) => void
   failLoading: (message: string) => void
   pause: () => void
@@ -57,7 +76,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   loadError: null,
   ...NO_INTERACTION,
   setPhase: (phase) => set(phase === 'menu' ? { phase, ...NO_INTERACTION } : { phase }),
-  startLoading: (cityId) => set({ phase: 'loading', cityId, loadError: null, ...NO_INTERACTION }),
+  selectCity: (cityId) => set({ cityId }),
+  startLoading: (cityId) => {
+    rememberCity(cityId)
+    set({ phase: 'loading', cityId, loadError: null, ...NO_INTERACTION })
+  },
   failLoading: (message) => set({ phase: 'menu', loadError: message }),
   pause: () => get().phase === 'playing' && set({ phase: 'paused' }),
   resume: () => get().phase === 'paused' && set({ phase: 'playing' }),
