@@ -12,7 +12,7 @@ const STEPS = [
   'Spawning wildlife…',
 ]
 
-export function LoadingScreen({ onLoaded }: { onLoaded: (session: GameSession) => void }) {
+export function LoadingScreen({ onLoaded }: { onLoaded: (session: GameSession) => Promise<void> }) {
   const cityId = useAppStore((s) => s.cityId)
   const [message, setMessage] = useState(STEPS[0] as string)
 
@@ -30,7 +30,7 @@ export function LoadingScreen({ onLoaded }: { onLoaded: (session: GameSession) =
         say('Spawning wildlife…')
         await nextFrame()
         const session = createSession(city, undefined, startHourFromUrl())
-        if (!cancelled) onLoaded(session)
+        if (!cancelled) await onLoaded(session)
       } catch (e) {
         console.error('[wildcity] city load failed', e)
         if (!cancelled) useAppStore.getState().failLoading(describeLoadError(e))

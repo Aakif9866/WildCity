@@ -1,5 +1,7 @@
 import { Canvas } from '@react-three/fiber'
 import type { GameSession } from '@/game/session'
+import { AdaptiveQuality } from '@/render/AdaptiveQuality'
+import { StatsOverlay } from '@/render/StatsOverlay'
 import { Atmosphere } from '@/render/Atmosphere'
 import { TimeSystem } from '@/render/TimeSystem'
 import { AnimalMarker } from '@/render/animals/AnimalMarker'
@@ -25,6 +27,8 @@ export function GameCanvas({ session, onQuit }: { session: GameSession; onQuit: 
       <Canvas camera={{ position: [0, 5, 27], fov: 60, near: 0.3, far: 1500 }} dpr={[1, 2]}>
         <Atmosphere session={session} />
         <TimeSystem session={session} />
+        <AdaptiveQuality />
+        <StatsOverlay />
         <CityScene city={session.city} />
         <Boundary halfSize={session.city.metadata.halfSize} />
         <PlayerAvatar session={session} />

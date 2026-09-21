@@ -1,6 +1,6 @@
-import { useGLTF } from '@react-three/drei'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, useLoader } from '@react-three/fiber'
 import { Suspense, useEffect, useMemo } from 'react'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { SPECIES } from '@/game/animals/species'
 import type { Animal } from '@/game/animals/types'
 import { AnimalErrorBoundary } from './AnimalErrorBoundary'
@@ -23,8 +23,9 @@ function ProceduralView({ animal }: { animal: Animal }) {
 }
 
 function GlbView({ animal, url }: { animal: Animal; url: string }) {
-  // Draco off: models here are tiny; when compression is adopted (Phase 10) point drei at a local decoder.
-  const gltf = useGLTF(url, false)
+  // Plain GLTFLoader (cached + suspending via R3F). Our models are tens of KB, so Draco/Meshopt decoders
+  // would cost more than they save; add them to the loader here if models ever get large.
+  const gltf = useLoader(GLTFLoader, url)
   const visual = useMemo(() => new GlbAnimal(gltf.scene, gltf.animations), [gltf])
   return <VisualHost animal={animal} visual={visual} />
 }

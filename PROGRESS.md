@@ -99,13 +99,23 @@
     night and 0% by day, pigeons 81% of the night, cats 22% of the day and 0% at night
   - 166 unit tests; smoke checks dawn/noon/sunset/night lighting, running clock, pause skip, dog sleep/wake
 
+- **Phase 10 — Optimization** (branch `phase-10-optimization`) — **partly done, not yet smoke-verified**
+  - Tooling: `npm run bench` (CPU), `npm run perf` (real Chrome), `?stats` / F3 overlay, `?quality=fixed`
+  - Measured first: game logic is negligible (22 animals ~0.01 ms/frame); trees are 80-87% of triangles
+  - Done: menu bundle 334 -> ~78 KB gzip (3D stack loaded on demand), open-ended tree trunks (-20% triangles),
+    drei removed (-7.7 KB gzip), adaptive resolution (`src/game/quality.ts`, unit-tested)
+  - Found and fixed a ~300 ms load regression I introduced (Suspense reveal throttle); final A/B shows load time unchanged vs Phase 9
+  - Reverted an optimization that measured as no gain (nav-grid mask)
+  - See PERFORMANCE.md for numbers and what was deliberately not changed
+
 ## In progress
 
-Nothing.
+- Phase 10: the browser smoke checks for it (menu paints without the 3D chunks, prefetch, `?stats`, F3)
+  are written but **have not been run**, and the full smoke has not been re-run since the Suspense fix.
 
 ## Next
 
-- Phase 10 — optimization: measure FPS, memory, load time, asset sizes, draw calls; optimize what the numbers justify
+- Finish Phase 10 verification, then Phase 11 — production deployment and cross-browser testing
 
 ## Known issues
 

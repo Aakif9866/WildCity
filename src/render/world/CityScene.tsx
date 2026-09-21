@@ -112,7 +112,9 @@ function Trees({ city }: { city: CityData }) {
   return (
     <>
       <instancedMesh ref={trunks} args={[undefined, undefined, count]}>
-        <cylinderGeometry args={[0.2, 0.3, 2, 5]} />
+        {/* Open-ended: the caps are never visible (top hidden in the crown, bottom on the ground) and
+            trees are ~80% of a dense city's triangles. */}
+        <cylinderGeometry args={[0.2, 0.3, 2, 5, 1, true]} />
         <meshLambertMaterial color="#6b4a2f" />
       </instancedMesh>
       <instancedMesh ref={crowns} args={[undefined, undefined, count]}>

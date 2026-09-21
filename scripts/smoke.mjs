@@ -900,7 +900,7 @@ try {
   const errors6 = []
   page6.on('pageerror', (e) => errors6.push(String(e)))
   page6.on('console', (m) => m.type() === 'error' && errors6.push(m.text()))
-  await page6.goto(`http://localhost:${PORT}/?debug&city=demo&hour=22`)
+  await page6.goto(`http://localhost:${PORT}/?debug&city=demo&hour=22&quality=fixed`)
   await page6.getByRole('button', { name: /Explore/ }).click()
   await page6.waitForFunction(() => !!window.__wildcity?.session, null, { timeout: 60000 })
   await sleep(1200)
@@ -1035,6 +1035,46 @@ try {
     errors6.slice(0, 3).join(' | '),
   )
   await page6.close()
+
+  // ---- Phase 10: performance tooling ----
+  const page7 = await browser.newPage({ viewport: { width: 1280, height: 720 } })
+  const errors7 = []
+  page7.on('pageerror', (e) => errors7.push(String(e)))
+  page7.on('console', (m) => m.type() === 'error' && errors7.push(m.text()))
+  const jsRequested = []
+  page7.on('request', (r) => r.url().endsWith('.js') && jsRequested.push(r.url()))
+  await page7.goto(`http://localhost:${PORT}/?debug&city=demo&hour=12&stats`)
+  await page7.getByRole('button', { name: /Explore/ }).waitFor()
+  const atMenu = jsRequested.filter((u) => /GameCanvas|three-/.test(u)).length
+  // The 3D chunks are prefetched 800 ms after the menu shows; before that only the entry chunk loads.
+  check(
+    'the menu paints without downloading the 3D stack',
+    atMenu === 0,
+    `${atMenu} 3D chunks at first paint`,
+  )
+  await sleep(2500)
+  check(
+    'the 3D chunks are prefetched in the background while on the menu',
+    jsRequested.some((u) => /GameCanvas/.test(u)),
+  )
+  await page7.getByRole('button', { name: /Explore/ }).click()
+  await page7.waitForFunction(() => !!window.__wildcity?.session, null, { timeout: 60000 })
+  await sleep(1500)
+  const statsText = await page7.getByTestId('stats').textContent()
+  check(
+    '?stats shows fps, calls, triangles, dpr and heap',
+    /fps/.test(statsText) &&
+      /calls/.test(statsText) &&
+      /tris/.test(statsText) &&
+      /dpr/.test(statsText),
+    statsText,
+  )
+  await page7.keyboard.press('F3')
+  check('F3 toggles the stats overlay', !(await page7.getByTestId('stats').isVisible()))
+  await page7.keyboard.press('F3')
+  check('F3 toggles it back on', await page7.getByTestId('stats').isVisible())
+  check('no console/page errors with stats', errors7.length === 0, errors7.slice(0, 3).join(' | '))
+  await page7.close()
 
   check('no console/page errors', errors.length === 0, errors.slice(0, 3).join(' | '))
   void PHASE

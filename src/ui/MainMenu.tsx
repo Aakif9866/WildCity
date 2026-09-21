@@ -28,6 +28,12 @@ export function MainMenu() {
   const [cities, setCities] = useState<CityIndexEntry[] | null>(null)
   const [query, setQuery] = useState('')
 
+  // Warm the 3D chunk in the background so Explore feels instant without slowing the first paint.
+  useEffect(() => {
+    const t = window.setTimeout(() => void import('@/render/GameCanvas'), 800)
+    return () => window.clearTimeout(t)
+  }, [])
+
   useEffect(() => {
     let cancelled = false
     void loadCityIndex().then((list) => {
