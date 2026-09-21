@@ -17,6 +17,14 @@ const check = (name, ok, detail = '') => {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? `  (${detail})` : ''}`)
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+// Earlier phases' checks assume a stable time of day: pin the clock at noon.
+const freezeNoon = (page) =>
+  page.evaluate(() => {
+    const S = window.__wildcity.session
+    S.clock.hour = 12
+    S.clock.daySeconds = 1e9
+    S.time.phase = 'day'
+  })
 const appears = (locator, timeout = 8000) =>
   locator.waitFor({ state: 'visible', timeout }).then(
     () => true,
@@ -76,6 +84,8 @@ try {
 
   await page.getByRole('button', { name: 'Explore' }).click()
   await page.waitForSelector('canvas')
+  await page.waitForFunction(() => !!window.__wildcity?.session)
+  await freezeNoon(page)
   await sleep(2500)
   await page.screenshot({ path: `${OUT}/phase1-world.png` })
 
@@ -654,6 +664,7 @@ try {
   await page2.getByRole('button', { name: 'Explore' }).click()
   check('loading screen shows progress', await appears(page2.getByText('Loading roads…'), 3000))
   await page2.waitForFunction(() => !!window.__wildcity?.session, null, { timeout: 60000 })
+  await freezeNoon(page2)
   const loadMs = Date.now() - tLoad
   await sleep(1500)
   const real = await page2.evaluate(() => {
@@ -827,6 +838,7 @@ try {
   check('arrow keys move the selection', !!pressed)
   await page5.getByLabel('Search cities').press('Enter')
   await page5.waitForFunction(() => !!window.__wildcity?.session, null, { timeout: 60000 })
+  await freezeNoon(page5)
   const picked = await page5.evaluate(() => window.__wildcity.session.city.metadata)
   check(
     'Enter starts the highlighted city',
@@ -882,6 +894,147 @@ try {
     errors5.slice(0, 3).join(' | '),
   )
   await page5.close()
+
+  // ---- Phase 9: day / night ----
+  const page6 = await browser.newPage({ viewport: { width: 1280, height: 720 } })
+  const errors6 = []
+  page6.on('pageerror', (e) => errors6.push(String(e)))
+  page6.on('console', (m) => m.type() === 'error' && errors6.push(m.text()))
+  await page6.goto(`http://localhost:${PORT}/?debug&city=demo&hour=22`)
+  await page6.getByRole('button', { name: /Explore/ }).click()
+  await page6.waitForFunction(() => !!window.__wildcity?.session, null, { timeout: 60000 })
+  await sleep(1200)
+  const atmo = () =>
+    page6.evaluate(() => ({
+      ...window.__wildcity.session.atmosphere,
+      hour: window.__wildcity.session.clock.hour,
+      phase: window.__wildcity.session.time.phase,
+    }))
+  const lum = (hex) => {
+    const n = parseInt(hex.slice(1), 16)
+    return (((n >> 16) & 255) * 0.3 + ((n >> 8) & 255) * 0.6 + (n & 255) * 0.1) / 255
+  }
+  const night = await atmo()
+  check(
+    '?hour= starts the game at that time of day',
+    Math.abs(night.hour - 22) < 0.3 && night.phase === 'night',
+    JSON.stringify(night),
+  )
+  check(
+    'night: dark sky, stars visible, dim (but readable) light',
+    lum(night.sky) < 0.15 &&
+      night.stars > 0.9 &&
+      night.hemiIntensity + night.lightIntensity < 2.1 &&
+      night.hemiIntensity > 0.5,
+    JSON.stringify(night),
+  )
+  check(
+    'the HUD clock shows the time and phase',
+    /2[12]:\d\d · Night/.test((await page6.getByLabel('Time of day').textContent()) ?? ''),
+  )
+  await page6.evaluate(() => {
+    const S = window.__wildcity.session
+    S.clock.daySeconds = 1e9
+    S.player.x = 0
+    S.player.z = 40
+    S.camera.pitch = 0.45
+    S.camera.yaw = 0
+    S.camera.distance = 7
+  })
+  await sleep(500)
+  await page6.screenshot({ path: `${OUT}/phase9-night.png` })
+
+  await page6.evaluate(() => {
+    const S = window.__wildcity.session
+    S.clock.hour = 12
+  })
+  await sleep(700)
+  const noon = await atmo()
+  check(
+    'noon: bright sky, no stars, strong light',
+    lum(noon.sky) > 0.5 &&
+      noon.stars === 0 &&
+      noon.hemiIntensity + noon.lightIntensity > 2.2 &&
+      noon.phase === 'day',
+    JSON.stringify(noon),
+  )
+  await page6.screenshot({ path: `${OUT}/phase9-noon.png` })
+
+  await page6.evaluate(() => {
+    window.__wildcity.session.clock.hour = 18.5
+  })
+  await sleep(700)
+  const sunset = await atmo()
+  check(
+    'sunset: warm (red > blue) sky between noon and night brightness',
+    parseInt(sunset.sky.slice(1, 3), 16) > parseInt(sunset.sky.slice(5, 7), 16) &&
+      lum(sunset.sky) < lum(noon.sky) &&
+      lum(sunset.sky) > lum(night.sky),
+    sunset.sky,
+  )
+  await page6.screenshot({ path: `${OUT}/phase9-sunset.png` })
+
+  // The clock runs on its own.
+  await page6.evaluate(() => {
+    const S = window.__wildcity.session
+    S.clock.hour = 8
+    S.clock.daySeconds = 360
+  })
+  const h0 = (await atmo()).hour
+  await sleep(3000)
+  const h1 = (await atmo()).hour
+  check(
+    'the clock advances (software rendering runs at a low fps, so dt-clamping slows it below 0.07 h/s)',
+    h1 - h0 > 0.03 && h1 - h0 < 0.4,
+    `${h0.toFixed(2)} -> ${h1.toFixed(2)}`,
+  )
+
+  // Pause menu time skip.
+  await page6.keyboard.press('Escape')
+  await page6.getByRole('button', { name: 'Night' }).click()
+  const skipped = await atmo()
+  check(
+    'pause-menu shortcut jumps to night',
+    skipped.phase === 'night' && skipped.hour > 21,
+    JSON.stringify(skipped),
+  )
+  const frozenAt = skipped.hour
+  await sleep(1500)
+  check('the clock is stopped while paused', Math.abs((await atmo()).hour - frozenAt) < 0.01)
+  await page6.getByRole('button', { name: 'Resume' }).click()
+
+  // Animal schedules follow the clock: dogs sleep at night and are up by day.
+  await page6.evaluate(() => {
+    const S = window.__wildcity.session
+    S.clock.hour = 22
+    S.clock.daySeconds = 1e9
+    S.timeScale = 8
+    S.player.x = 240
+    S.player.z = 240 // far from everyone
+  })
+  const dogsAsleep = () =>
+    page6.evaluate(
+      () =>
+        window.__wildcity.session.animals.filter((a) => a.species === 'dog' && a.state === 'SLEEP')
+          .length,
+    )
+  const nightSleepers = await waitFor2(
+    async () => ((await dogsAsleep()) >= 2 ? await dogsAsleep() : 0),
+    45000,
+  )
+  check('at night the dogs go to sleep', !!nightSleepers, `asleep=${nightSleepers}`)
+  await page6.evaluate(() => {
+    window.__wildcity.session.clock.hour = 12
+  })
+  const woke = await waitFor2(async () => ((await dogsAsleep()) === 0 ? true : false), 45000)
+  check('by day the dogs wake up', !!woke)
+  await page6.evaluate(() => (window.__wildcity.session.timeScale = 1))
+  check(
+    'no console/page errors in day/night',
+    errors6.length === 0,
+    errors6.slice(0, 3).join(' | '),
+  )
+  await page6.close()
 
   check('no console/page errors', errors.length === 0, errors.slice(0, 3).join(' | '))
   void PHASE

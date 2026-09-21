@@ -1,5 +1,7 @@
 import { Canvas } from '@react-three/fiber'
 import type { GameSession } from '@/game/session'
+import { Atmosphere } from '@/render/Atmosphere'
+import { TimeSystem } from '@/render/TimeSystem'
 import { AnimalMarker } from '@/render/animals/AnimalMarker'
 import { Animals } from '@/render/animals/Animals'
 import { DebugProbe } from '@/render/DebugProbe'
@@ -8,6 +10,7 @@ import { PlayerController } from '@/render/PlayerController'
 import { Boundary } from '@/render/world/Boundary'
 import { CityScene } from '@/render/world/CityScene'
 import { useAppStore } from '@/state/appStore'
+import { ClockDisplay } from '@/ui/ClockDisplay'
 import { AnimalPanel } from '@/ui/AnimalPanel'
 import { FollowBanner } from '@/ui/FollowBanner'
 import { Hud } from '@/ui/Hud'
@@ -20,10 +23,8 @@ export function GameCanvas({ session, onQuit }: { session: GameSession; onQuit: 
   return (
     <>
       <Canvas camera={{ position: [0, 5, 27], fov: 60, near: 0.3, far: 1500 }} dpr={[1, 2]}>
-        <color attach="background" args={['#9ccbee']} />
-        <fog attach="fog" args={['#9ccbee', 200, 800]} />
-        <hemisphereLight args={['#e6f2ff', '#7a8f66', 1.5]} />
-        <directionalLight position={[120, 200, 80]} intensity={1.1} />
+        <Atmosphere session={session} />
+        <TimeSystem session={session} />
         <CityScene city={session.city} />
         <Boundary halfSize={session.city.metadata.halfSize} />
         <PlayerAvatar session={session} />
@@ -34,6 +35,7 @@ export function GameCanvas({ session, onQuit }: { session: GameSession; onQuit: 
         <DebugProbe session={session} />
       </Canvas>
       <Hud session={session} />
+      <ClockDisplay session={session} />
       <InteractPrompt session={session} />
       <FollowBanner session={session} />
       <AnimalPanel session={session} />

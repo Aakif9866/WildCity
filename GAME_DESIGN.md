@@ -48,3 +48,10 @@ Weather, discovery system, audio, mobile controls, vehicles, quests, saves, mult
 Search the city list, pick with mouse or keyboard, Explore. Each city is a ~700 m square of real
 OpenStreetMap data chosen for a good mix of streets, buildings, parkland and water. Available:
 Hyderabad, Bengaluru, London, and an offline Demo Town.
+
+## Day/night (implemented)
+
+A day lasts 6 real minutes. The sun rises in the east, crosses the sky and sets in the west; sky and
+fog follow, stars appear at night. Animals keep schedules: dogs and pigeons sleep at night, cats
+doze through the day and come alive in the evening. Skip to any phase from the pause menu, or open
+`/?hour=22` to start at night.

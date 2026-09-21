@@ -89,19 +89,30 @@
   - Quitting drops the session so worlds don't accumulate
   - 153 unit tests; smoke covers search, keyboard selection, switching city, remembered choice
 
+- **Phase 9 — Day/night** (branch `phase-9-day-night`)
+  - `GameClock` (a day = 6 real minutes, starts at 08:00, `?hour=` to start elsewhere), HUD clock,
+    pause-menu shortcuts (Morning / Day / Evening / Night)
+  - Pure `lightingAt(hour)`: sun arc (east -> overhead -> west), moon opposite, keyframed sky/fog/light
+    colours and intensities, star fade; night stays dim but readable; continuity tested for every minute
+  - `Atmosphere` component drives lights, sky, fog, sun/moon discs and 450 stars without React state
+  - Animal schedules now follow the real clock: measured over 2 simulated days, dogs sleep 60% of the
+    night and 0% by day, pigeons 81% of the night, cats 22% of the day and 0% at night
+  - 166 unit tests; smoke checks dawn/noon/sunset/night lighting, running clock, pause skip, dog sleep/wake
+
 ## In progress
 
 Nothing.
 
 ## Next
 
-- Phase 9 — day/night: sun movement, lighting changes, animal schedules
+- Phase 10 — optimization: measure FPS, memory, load time, asset sizes, draw calls; optimize what the numbers justify
 
 ## Known issues
 
 - React pinned to 19.2.x due to R3F peer range (see ARCHITECTURE.md).
 - Cloudflare Pages not yet connected (needs the user's Cloudflare account).
 - Multipolygon holes (courtyards, lake islands) are ignored by the OSM converter; only outer rings are used.
+- Night has no artificial light (street lamps / lit windows) yet; the moon and ambient light keep it readable.
 - Trees have no collision (player and animals walk through them); the camera can sit inside a canopy.
 - Dog GLB is generated from the same box rig (looks identical to the fallback); real art can replace it.
 - Three.js logs a deprecation for `THREE.Clock` (from R3F internals) - harmless.

@@ -1,4 +1,6 @@
-import type { GameSession } from '@/game/session'
+import { PHASE_START_HOUR, phaseLabel } from '@/game/time/clock'
+import { DAY_PHASES } from '@/game/time/dayPhase'
+import { setHour, type GameSession } from '@/game/session'
 import { useAppStore } from '@/state/appStore'
 
 export function PauseMenu({ session, onQuit }: { session: GameSession; onQuit: () => void }) {
@@ -16,6 +18,22 @@ export function PauseMenu({ session, onQuit }: { session: GameSession; onQuit: (
       >
         Resume
       </button>
+
+      <div className="text-center">
+        <p className="mb-1 text-xs tracking-wide text-white/60 uppercase">Skip to</p>
+        <div className="flex gap-2">
+          {DAY_PHASES.map((p) => (
+            <button
+              key={p}
+              className="rounded bg-white/15 px-3 py-1 text-sm hover:bg-white/25"
+              onClick={() => setHour(session, PHASE_START_HOUR[p])}
+            >
+              {phaseLabel(PHASE_START_HOUR[p])}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <button className="rounded bg-white/15 px-6 py-2 hover:bg-white/25" onClick={onQuit}>
         Quit to menu
       </button>

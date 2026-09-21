@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { describeLoadError, loadCity } from '@/cities/loader'
-import { createSession, type GameSession } from '@/game/session'
+import { createSession, startHourFromUrl, type GameSession } from '@/game/session'
 import { useAppStore } from '@/state/appStore'
 
 const nextFrame = (): Promise<void> => new Promise((r) => requestAnimationFrame(() => r()))
@@ -29,7 +29,7 @@ export function LoadingScreen({ onLoaded }: { onLoaded: (session: GameSession) =
         await nextFrame()
         say('Spawning wildlife…')
         await nextFrame()
-        const session = createSession(city)
+        const session = createSession(city, undefined, startHourFromUrl())
         if (!cancelled) onLoaded(session)
       } catch (e) {
         console.error('[wildcity] city load failed', e)

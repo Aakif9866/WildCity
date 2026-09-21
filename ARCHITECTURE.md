@@ -81,6 +81,13 @@ Adding a city = run the script with new coordinates; no engine change. Runtime e
 (`CityLoadError`, `CityDataError`) and surface as a friendly menu message with recovery options.
 OSM data is (c) OpenStreetMap contributors, ODbL: `metadata.attribution` is displayed in-game.
 
+## Time of day (Phase 9)
+
+`session.clock` (game hour) is advanced by `TimeSystem`; `syncTime` derives `session.time.phase` for
+the animal AI (activity schedules) and `Atmosphere` turns `lightingAt(hour)` into three.js light,
+sky and fog values every frame. `lightingAt` is pure, so weather can later wrap it (scale
+intensities, desaturate colours) without touching the renderer.
+
 ## Key decisions
 
 - **Simulation outside React.** Per-frame state (player, animals) lives in plain modules/refs and is
