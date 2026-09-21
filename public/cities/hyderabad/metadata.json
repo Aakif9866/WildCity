@@ -1,0 +1,7 @@
+{
+  "id": "hyderabad",
+  "name": "Hyderabad",
+  "country": "India",
+  "center": { "lat": 17.385, "lon": 78.4867 },
+  "note": "Placeholder. Real area bounds and data files arrive in Phase 7."
+}
