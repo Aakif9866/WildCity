@@ -1,6 +1,7 @@
-import { stepAlongPath } from '@/game/animals/locomotion'
+import { settleToGround, stepAlongPath, stepFlying } from '@/game/animals/locomotion'
 import { preference, SPECIES, zoneCost, type SpeciesConfig } from '@/game/animals/species'
 import type { Animal, AnimalState, AnimationName, TargetKind } from '@/game/animals/types'
+import type { ZoneKind } from '@/cities/types'
 import type { NavGrid } from '@/game/navigation/NavGrid'
 import type { DayPhase } from '@/game/time/dayPhase'
 import type { World } from '@/game/world/World'
@@ -37,8 +38,7 @@ function clearPlan(a: Animal): void {
   a.pathIndex = 0
 }
 
-/** Route to (x, z), snapping to the nearest walkable cell. Returns false if unreachable. */
-function planTo(
+function planGround(
   a: Animal,
   s: SpeciesConfig,
   ctx: AIContext,
@@ -54,7 +54,69 @@ function planTo(
   a.targetKind = kind
   a.path = path
   a.pathIndex = 0
+  a.airborne = false
   return true
+}
+
+/** Flyers hop on foot for short trips between walkable spots, and fly for everything else. */
+function planFlight(
+  a: Animal,
+  s: SpeciesConfig,
+  ctx: AIContext,
+  x: number,
+  z: number,
+  kind: TargetKind,
+): boolean {
+  const [gx, gz] = ctx.world.clampToBounds(x, z, 3)
+  if (ctx.world.zoneAt(gx, gz) === 'WATER') return false
+  const onGround = !a.airborne && a.position.y < 0.3
+  const shortHop = Math.hypot(gx - a.position.x, gz - a.position.z) < 10
+  if (
+    onGround &&
+    shortHop &&
+    ctx.nav.isWalkable(gx, gz) &&
+    ctx.nav.isWalkable(a.position.x, a.position.z)
+  )
+    return planGround(a, s, ctx, gx, gz, kind)
+  a.target = [gx, gz]
+  a.targetKind = kind
+  a.path = [[gx, gz]]
+  a.pathIndex = 0
+  a.airborne = true
+  return true
+}
+
+/** Route to (x, z). Returns false if unreachable. */
+function planTo(
+  a: Animal,
+  s: SpeciesConfig,
+  ctx: AIContext,
+  x: number,
+  z: number,
+  kind: TargetKind,
+): boolean {
+  return s.flying ? planFlight(a, s, ctx, x, z, kind) : planGround(a, s, ctx, x, z, kind)
+}
+
+/** Move along the current plan on foot or by air. */
+function move(a: Animal, s: SpeciesConfig, ctx: AIContext, groundSpeed: number, dt: number) {
+  return a.airborne
+    ? stepFlying(a, s, s.runSpeed * 0.75, dt, ctx.world)
+    : stepAlongPath(a, s, groundSpeed, dt, ctx.world)
+}
+
+/** Sample a spot the species can actually reach: any open air for flyers, walkable ground otherwise. */
+function pickSpot(
+  s: SpeciesConfig,
+  ctx: AIContext,
+  a: Animal,
+  minR: number,
+  maxR: number,
+  weight: (z: ZoneKind) => number,
+  tries?: number,
+) {
+  const sample = s.flying ? ctx.nav.randomAirSpot.bind(ctx.nav) : ctx.nav.randomSpot.bind(ctx.nav)
+  return sample(a.position.x, a.position.z, minR, maxR, ctx.rng, weight, tries)
 }
 
 const NEAR_WATER = 4
@@ -82,27 +144,26 @@ export function startBehaviour(
       enterState(a, 'SLEEP')
       return true
     case 'wander': {
-      const spot = nav.randomSpot(px, pz, 6, 30, rng, (z) => preference(s, z) + 0.05)
+      const spot = pickSpot(
+        s,
+        ctx,
+        a,
+        s.wanderRange[0],
+        s.wanderRange[1],
+        (z) => preference(s, z) + 0.05,
+      )
       if (!spot || !planTo(a, s, ctx, spot[0], spot[1], 'spot')) return false
       enterState(a, 'WANDER')
       return true
     }
     case 'goto_zone': {
-      const spot = nav.randomSpot(px, pz, 20, 70, rng, (z) => preference(s, z) ** 3, 20)
+      const spot = pickSpot(s, ctx, a, 20, 70, (z) => preference(s, z) ** 3, 20)
       if (!spot || !planTo(a, s, ctx, spot[0], spot[1], 'spot')) return false
       enterState(a, 'MOVE_TO_TARGET')
       return true
     }
     case 'food': {
-      const spot = nav.randomSpot(
-        px,
-        pz,
-        8,
-        70,
-        rng,
-        (z) => (s.foodZones.includes(z) ? 1 : 0.02),
-        24,
-      )
+      const spot = pickSpot(s, ctx, a, 8, 70, (z) => (s.foodZones.includes(z) ? 1 : 0.02), 24)
       if (!spot || !planTo(a, s, ctx, spot[0], spot[1], 'food')) return false
       enterState(a, 'MOVE_TO_TARGET')
       return true
@@ -209,7 +270,7 @@ function startFlee(a: Animal, s: SpeciesConfig, ctx: AIContext): void {
 const idle: Handler = (a, s, ctx, dt) => {
   stop(a, dt)
   // Livelier individuals spend less time standing around.
-  const wait = 1.5 + (1 - a.vigor / 100) * 4
+  const wait = (1.5 + (1 - a.vigor / 100) * 4) * s.idleScale
   if (a.stateTime > wait && a.cooldown <= 0) decide(a, s, ctx)
 }
 
@@ -220,7 +281,7 @@ const walking: Handler = (a, s, ctx, dt) => {
     return
   }
   const hurry = a.targetKind === 'food' && a.hunger > 75 ? 1.3 : 1
-  if (stepAlongPath(a, s, s.walkSpeed * hurry, dt, ctx.world) !== 'arrived') return
+  if (move(a, s, ctx, s.walkSpeed * hurry, dt) !== 'arrived') return
 
   const kind = a.targetKind
   clearPlan(a)
@@ -254,7 +315,7 @@ const sleep: Handler = (a, s, ctx, dt) => {
 }
 
 const flee: Handler = (a, s, ctx, dt) => {
-  if (stepAlongPath(a, s, s.runSpeed, dt, ctx.world) === 'arrived' || a.stateTime > 12) {
+  if (move(a, s, ctx, s.runSpeed, dt) === 'arrived' || a.stateTime > 12) {
     const p = ctx.player
     clearPlan(a)
     // Still too close? Keep running; otherwise calm down.
@@ -276,6 +337,7 @@ const HANDLERS: Partial<Record<AnimalState, Handler>> = {
 }
 
 function animationFor(a: Animal): AnimationName {
+  if (a.airborne) return 'fly'
   if (a.state === 'EAT' || a.state === 'DRINK') return 'eat'
   if (a.state === 'SLEEP') return 'sleep'
   if (a.speed > 3) return 'run'
@@ -289,6 +351,8 @@ export function updateAnimal(a: Animal, ctx: AIContext, dt: number): void {
   a.stateTime += dt
   a.cooldown = Math.max(0, a.cooldown - dt)
   updateNeeds(a, s, dt)
+  // A flight cut short by a state change (e.g. sudden exhaustion) must still end on the ground.
+  if (a.airborne && a.path.length === 0) settleToGround(a, dt, ctx.world)
 
   if (a.state !== 'FLEE' && a.cooldown <= 0 && isThreatened(a, s, ctx.player)) startFlee(a, s, ctx)
   if (a.state !== 'FLEE' || a.path.length > 0 || a.stateTime > 0)

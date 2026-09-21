@@ -47,13 +47,22 @@
   - Derived `moodOf` for the UI; `session.timeScale` for testing/profiling
   - 69 unit tests incl. a 10-minute population soak test; smoke covers hunger->eat, exhaustion->rest, flee
 
+- **Phase 5 — Multiple animals** (branch `phase-5-multiple-animals`)
+  - Cat, pigeon, monkey, squirrel added purely as data (rig JSON + `SpeciesConfig`): zone
+    preferences, activity schedules, personality ranges, wander range, idle scale, stride scale
+  - Pigeon flight: take-off, cruise over buildings, rooftop landing; short hops on foot; flights
+    interrupted mid-air settle to the ground; wing-flap animation
+  - Default population of 22 (4 dog, 3 cat, 8 pigeon, 3 monkey, 4 squirrel); spawn rules handle flyers on roofs
+  - `npm run models` now only bakes species that opt in with `"glb": true` (dog)
+  - 87 unit tests incl. spec-matching species data, flight, and a 24 h / 22-animal soak test
+
 ## In progress
 
 Nothing.
 
 ## Next
 
-- Phase 5 — multiple animals: cat, pigeon (flying), monkey, squirrel with species-specific behaviour
+- Phase 6 — player/animal interaction: detection radius, reactions, inspect panel, follow mode
 
 ## Known issues
 

@@ -49,4 +49,6 @@ export interface Animal {
   animation: AnimationName
   /** Seconds until the animal may plan again after a failed plan (prevents per-frame A* retries). */
   cooldown: number
+  /** True while flying between points (flying species only). */
+  airborne: boolean
 }

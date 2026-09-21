@@ -46,7 +46,7 @@ export function createSession(city: CityData, seed = 1234): GameSession {
     nav,
     player: createPlayer(x, z, yaw, world),
     camera: createCameraRig(yaw, x, z),
-    animals: spawnAnimals(DEFAULT_SPAWN_PLAN, nav, rng, { x, z }),
+    animals: spawnAnimals(DEFAULT_SPAWN_PLAN, world, nav, rng, { x, z }),
     rng,
     time: { phase: 'day' },
     timeScale: 1,

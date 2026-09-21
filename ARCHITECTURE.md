@@ -53,6 +53,14 @@ personality x time-of-day x surroundings). `startBehaviour` sets up a plan (A* r
 on arrival the handler picks the follow-up state from `targetKind` (food -> EAT, water -> DRINK).
 Failed plans set `cooldown` so a cornered animal doesn't re-run A* every frame.
 
+## Species and flight (Phase 5)
+
+A species is one `SpeciesConfig` entry + one rig JSON; no engine branches per species. The only
+structural difference is `flying`: flyers plan a straight line (`planFlight`) instead of an A* route,
+climb to cruise altitude on longer trips, and land on whatever is below the goal (rooftop or
+ground). Short hops between walkable spots stay on foot. `airborne` marks an active flight and
+drives the wing-flap animation; `settleToGround` guarantees a bird never hovers if its plan is cleared.
+
 ## Key decisions
 
 - **Simulation outside React.** Per-frame state (player, animals) lives in plain modules/refs and is

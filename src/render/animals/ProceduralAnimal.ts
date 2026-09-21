@@ -60,9 +60,11 @@ export class ProceduralAnimal implements AnimalVisual {
   private readonly pose = newPose()
   private phase = 0
   private sleep = 0
+  private readonly stride: number
 
   constructor(speciesId: keyof typeof SPECIES, coat: number) {
     const rig = SPECIES[speciesId].rig
+    this.stride = SPECIES[speciesId].strideScale
     for (const group of rig.groups) {
       const node = new Group()
       node.position.set(...group.pivot)
@@ -80,13 +82,13 @@ export class ProceduralAnimal implements AnimalVisual {
     this.root.rotation.y = a.yaw
 
     const walk = SPECIES[a.species as keyof typeof SPECIES].walkSpeed
-    const move = Math.min(1.4, a.speed / walk)
+    const move = a.airborne ? 0 : Math.min(1.4, a.speed / walk)
     this.phase += a.speed * dt * 4.2
     this.sleep += ((a.animation === 'sleep' ? 1 : 0) - this.sleep) * Math.min(1, dt * 4)
     this.root.scale.y = 1 - 0.4 * this.sleep
 
     for (const { node, group } of this.nodes) {
-      const p = poseFor(group.anim, a.animation, move, this.phase, time, this.pose)
+      const p = poseFor(group.anim, a.animation, move, this.phase, time, this.pose, this.stride)
       node.position.set(group.pivot[0] + p.x, group.pivot[1] + p.y, group.pivot[2] + p.z)
       node.rotation.set(p.rx, p.ry, p.rz)
     }

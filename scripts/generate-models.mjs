@@ -95,6 +95,7 @@ const CLIPS = {
 function writeSpecies(file) {
   const id = file.replace('.json', '')
   const rig = JSON.parse(readFileSync(`${RIGS}/${file}`, 'utf8'))
+  if (!rig.glb) return // only species that opt in ship a GLB; the rest use the procedural rig
   const palette = rig.coats[0]
   const doc = new Document()
   const buffer = doc.createBuffer()

@@ -36,3 +36,7 @@ JS gzip: app 113 KB, three 192 KB.
 ## Phase 3
 
 Nav grid: 250x250 cells built once at load (well under 1 s in tests). A* capped at 12k expansions (~ms). One dog = 4 meshes (GLB) — unmerged per-group; the procedural rig is the same 4 draws. dog.glb = 24 KB.
+
+## Phase 5 (22 animals)
+
+72 draw calls measured with the full population in view at spawn (city ~23 + animals). Worst case is roughly 23 + 22 x 5-6 = ~145, under the 200 budget. AI cost: ~27 us per animal update in the soak test, so ~0.6 ms/frame for 22 animals.

@@ -1,6 +1,7 @@
+import type { NavGrid } from '@/game/navigation/NavGrid'
+import type { World } from '@/game/world/World'
 import type { Rng } from '@/utils/random'
 import { randRange } from '@/utils/random'
-import type { NavGrid } from '@/game/navigation/NavGrid'
 import { preference, type SpeciesConfig } from './species'
 import type { Animal, SpeciesId } from './types'
 
@@ -13,11 +14,12 @@ export interface SpawnRequest {
 }
 
 /**
- * Place animals on walkable ground, preferring each species' favourite zones and keeping a
- * safe distance from the player's spawn so nothing starts on top of them.
+ * Place animals in favourite zones, keeping a safe distance from the player's spawn so nothing
+ * starts on top of them. Ground species need walkable cells; flyers can start on rooftops.
  */
 export function spawnAnimals(
   requests: readonly SpawnRequest[],
+  world: World,
   nav: NavGrid,
   rng: Rng,
   avoid: { x: number; z: number },
@@ -25,41 +27,33 @@ export function spawnAnimals(
 ): Animal[] {
   const animals: Animal[] = []
   const counters = new Map<SpeciesId, number>()
+  const pick = (s: SpeciesConfig) => {
+    const weight = (z: Parameters<typeof preference>[1]): number => preference(s, z) ** 2
+    const r = nav.halfSize * 0.95
+    return s.flying
+      ? nav.randomAirSpot(0, 0, 0, r, rng, weight, 40)
+      : nav.randomSpot(0, 0, 0, r, rng, weight, 40)
+  }
+
   for (const { species, count } of requests) {
     for (let i = 0; i < count; i++) {
-      const spot = nav.randomSpot(
-        0,
-        0,
-        0,
-        nav.halfSize * 0.95,
-        rng,
-        (z) => preference(species, z) ** 2,
-        40,
-      )
-      let pos = spot
+      let pos = pick(species)
       for (
-        let tries = 0;
-        pos && Math.hypot(pos[0] - avoid.x, pos[1] - avoid.z) < minPlayerDistance && tries < 30;
-        tries++
-      ) {
-        pos = nav.randomSpot(
-          0,
-          0,
-          0,
-          nav.halfSize * 0.95,
-          rng,
-          (z) => preference(species, z) ** 2,
-          40,
-        )
-      }
-      if (!pos) continue // nowhere walkable found: skip rather than crash
+        let t = 0;
+        pos && Math.hypot(pos[0] - avoid.x, pos[1] - avoid.z) < minPlayerDistance && t < 30;
+        t++
+      )
+        pos = pick(species)
+      if (!pos) continue // nowhere suitable found: skip rather than crash
+
       const n = (counters.get(species.id) ?? 0) + 1
       counters.set(species.id, n)
+      const roof = species.flying ? (world.buildingAt(pos[0], pos[1])?.height ?? 0) : 0
       animals.push({
         id: `${species.id}-${n}`,
         species: species.id,
         coat: Math.floor(rng() * species.coats.length),
-        position: { x: pos[0], y: 0, z: pos[1] },
+        position: { x: pos[0], y: roof || world.heightAt(pos[0], pos[1]), z: pos[1] },
         yaw: rng() * Math.PI * 2,
         speed: 0,
         state: 'IDLE',
@@ -75,6 +69,7 @@ export function spawnAnimals(
         pathIndex: 0,
         animation: 'idle',
         cooldown: 0,
+        airborne: false,
       })
     }
   }

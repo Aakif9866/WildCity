@@ -325,6 +325,34 @@ export class NavGrid {
   }
 
   /**
+   * Like randomSpot for flyers: any in-bounds point that isn't water, including rooftops.
+   * Weights see the true zone (BUILDING included) so pigeons can prefer roofs.
+   */
+  randomAirSpot(
+    cx: number,
+    cz: number,
+    minR: number,
+    maxR: number,
+    rng: Rng,
+    weight?: ZoneCost,
+    tries = 14,
+  ): Vec2 | null {
+    const candidates: { p: Vec2; w: number }[] = []
+    const limit = this.halfSize - 3
+    for (let t = 0; t < tries; t++) {
+      const a = rng() * Math.PI * 2
+      const r = minR + rng() * (maxR - minR)
+      const x = cx + Math.cos(a) * r
+      const z = cz + Math.sin(a) * r
+      if (Math.abs(x) > limit || Math.abs(z) > limit) continue
+      const zone = this.zoneAt(x, z)
+      if (zone === 'WATER') continue
+      candidates.push({ p: [x, z], w: weight ? weight(zone) : 1 })
+    }
+    return pickWeighted(rng, candidates, (c) => c.w)?.p ?? null
+  }
+
+  /**
    * Sample walkable spots in an annulus and pick one weighted by `weight(zone)`. Cheap and
    * good enough for "where would I like to go next" decisions.
    */

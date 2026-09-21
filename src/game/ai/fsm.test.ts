@@ -29,7 +29,7 @@ const makeCtx = (
   animals,
 })
 const spawn = (seed: number, n = 1): Animal[] =>
-  spawnAnimals([{ species: dog, count: n }], nav, mulberry32(seed), { x: 0, z: 20 })
+  spawnAnimals([{ species: dog, count: n }], world, nav, mulberry32(seed), { x: 0, z: 20 })
 
 /** Run until `until` is true or `maxSeconds` pass. Returns elapsed seconds or -1. */
 function runUntil(

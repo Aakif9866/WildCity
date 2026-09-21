@@ -1,0 +1,100 @@
+{
+  "coats": [
+    {
+      "coat": "#8d949e",
+      "accent": "#4b5058"
+    },
+    {
+      "coat": "#d7d9dc",
+      "accent": "#9a9ea5"
+    },
+    {
+      "coat": "#5b5f68",
+      "accent": "#2f3238"
+    }
+  ],
+  "groups": [
+    {
+      "name": "body",
+      "pivot": [0, 0, 0],
+      "anim": "none",
+      "parts": [
+        {
+          "size": [0.14, 0.14, 0.28],
+          "pos": [0, 0.2, 0],
+          "color": "$coat"
+        },
+        {
+          "size": [0.08, 0.03, 0.12],
+          "pos": [0, 0.21, 0.19],
+          "color": "$accent"
+        }
+      ]
+    },
+    {
+      "name": "head",
+      "pivot": [0, 0.3, -0.14],
+      "anim": "head",
+      "parts": [
+        {
+          "size": [0.09, 0.09, 0.09],
+          "pos": [0, 0.03, -0.04],
+          "color": "$coat"
+        },
+        {
+          "size": [0.03, 0.025, 0.05],
+          "pos": [0, 0.02, -0.1],
+          "color": "$accent"
+        }
+      ]
+    },
+    {
+      "name": "wingL",
+      "pivot": [-0.075, 0.26, 0],
+      "anim": "flapL",
+      "parts": [
+        {
+          "size": [0.03, 0.09, 0.22],
+          "pos": [-0.01, -0.03, 0.03],
+          "color": "$accent"
+        }
+      ]
+    },
+    {
+      "name": "wingR",
+      "pivot": [0.075, 0.26, 0],
+      "anim": "flapR",
+      "parts": [
+        {
+          "size": [0.03, 0.09, 0.22],
+          "pos": [0.01, -0.03, 0.03],
+          "color": "$accent"
+        }
+      ]
+    },
+    {
+      "name": "legsA",
+      "pivot": [0, 0.13, 0],
+      "anim": "strideA",
+      "parts": [
+        {
+          "size": [0.02, 0.13, 0.02],
+          "pos": [-0.03, -0.065, 0],
+          "color": "$accent"
+        }
+      ]
+    },
+    {
+      "name": "legsB",
+      "pivot": [0, 0.13, 0],
+      "anim": "strideB",
+      "parts": [
+        {
+          "size": [0.02, 0.13, 0.02],
+          "pos": [0.03, -0.065, 0],
+          "color": "$accent"
+        }
+      ]
+    }
+  ]
+}

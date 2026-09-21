@@ -24,19 +24,22 @@ export function poseFor(
   phase: number,
   time: number,
   out: Pose,
+  strideScale = 1,
 ): Pose {
   out.x = out.y = out.z = out.rx = out.ry = out.rz = 0
   switch (anim) {
     case 'strideA':
     case 'strideB': {
       const p = anim === 'strideA' ? phase : phase + Math.PI
-      out.z = Math.sin(p) * 0.13 * moveAmount
-      out.y = Math.max(0, Math.cos(p)) * 0.07 * moveAmount
+      out.z = Math.sin(p) * 0.13 * moveAmount * strideScale
+      out.y = Math.max(0, Math.cos(p)) * 0.07 * moveAmount * strideScale
       break
     }
     case 'flapL':
     case 'flapR':
-      if (animation === 'fly') out.rz = (anim === 'flapL' ? 1 : -1) * Math.sin(time * 26) * 0.9
+      // Wings rest folded at the sides and only ever swing outward: 0 .. 1.4 rad.
+      if (animation === 'fly')
+        out.rz = (anim === 'flapL' ? 1 : -1) * (0.7 + Math.sin(time * 26) * 0.7)
       break
     case 'wag':
       out.ry = Math.sin(time * (animation === 'idle' ? 4 : 10)) * (animation === 'sleep' ? 0 : 0.45)

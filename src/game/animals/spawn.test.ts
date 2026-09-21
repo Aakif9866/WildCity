@@ -15,7 +15,7 @@ beforeAll(() => {
 
 describe('spawnAnimals', () => {
   it('spawns the requested count, on walkable ground, away from the player', () => {
-    const animals = spawnAnimals([{ species: SPECIES.dog, count: 12 }], nav, mulberry32(5), {
+    const animals = spawnAnimals([{ species: SPECIES.dog, count: 12 }], world, nav, mulberry32(5), {
       x: 0,
       z: 20,
     })
@@ -30,7 +30,7 @@ describe('spawnAnimals', () => {
 
   it('draws personality within the species ranges', () => {
     const { personality } = SPECIES.dog
-    for (const a of spawnAnimals([{ species: SPECIES.dog, count: 20 }], nav, mulberry32(9), {
+    for (const a of spawnAnimals([{ species: SPECIES.dog, count: 20 }], world, nav, mulberry32(9), {
       x: 0,
       z: 20,
     })) {
@@ -42,11 +42,11 @@ describe('spawnAnimals', () => {
   })
 
   it('is deterministic for a seed and biased towards preferred zones', () => {
-    const a = spawnAnimals([{ species: SPECIES.dog, count: 30 }], nav, mulberry32(1), {
+    const a = spawnAnimals([{ species: SPECIES.dog, count: 30 }], world, nav, mulberry32(1), {
       x: 0,
       z: 20,
     })
-    const b = spawnAnimals([{ species: SPECIES.dog, count: 30 }], nav, mulberry32(1), {
+    const b = spawnAnimals([{ species: SPECIES.dog, count: 30 }], world, nav, mulberry32(1), {
       x: 0,
       z: 20,
     })
