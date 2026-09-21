@@ -2,6 +2,7 @@ import { Canvas } from '@react-three/fiber'
 import { useMemo } from 'react'
 import { generateDemoCity } from '@/cities/demo'
 import { createSession } from '@/game/session'
+import { Animals } from '@/render/animals/Animals'
 import { DebugProbe } from '@/render/DebugProbe'
 import { PlayerAvatar } from '@/render/PlayerAvatar'
 import { PlayerController } from '@/render/PlayerController'
@@ -25,6 +26,7 @@ export function GameCanvas() {
         <CityScene city={session.city} />
         <Boundary halfSize={session.city.metadata.halfSize} />
         <PlayerAvatar session={session} />
+        <Animals session={session} />
         <PlayerController session={session} />
         <DebugProbe session={session} />
       </Canvas>

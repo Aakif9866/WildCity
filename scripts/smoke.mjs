@@ -49,8 +49,12 @@ try {
   }
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } })
   const errors = []
+  const warnings = []
   page.on('pageerror', (e) => errors.push(String(e)))
-  page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
+  page.on('console', (m) => {
+    if (m.type() === 'error') errors.push(m.text())
+    if (m.type() === 'warning') warnings.push(m.text())
+  })
 
   await page.goto(`http://localhost:${PORT}/?debug`)
   check('menu renders', await page.getByText('WILDCITY').first().isVisible())
@@ -182,6 +186,75 @@ try {
   await page.getByRole('button', { name: 'Resume' }).click()
   await sleep(200)
   check('Resume closes the pause menu', !(await page.getByText('PAUSED').isVisible()))
+
+  // ---- Phase 3: first animal ----
+  const glb = await page.evaluate(async () => {
+    const r = await fetch('/models/dog.glb')
+    const buf = new Uint8Array(await r.arrayBuffer())
+    return { ok: r.ok, size: buf.length, magic: String.fromCharCode(...buf.slice(0, 4)) }
+  })
+  check(
+    'dog.glb is served as a real GLB',
+    glb.ok && glb.magic === 'glTF' && glb.size > 1000,
+    JSON.stringify(glb),
+  )
+
+  await teleport(0, 20, 0)
+  const dogStart = await page.evaluate(() => {
+    const a = window.__wildcity.session.animals
+    return a.map((d) => ({ id: d.id, x: d.position.x, z: d.position.z }))
+  })
+  check(
+    'a dog is spawned',
+    dogStart.length >= 1 && dogStart[0].id.startsWith('dog'),
+    JSON.stringify(dogStart),
+  )
+
+  const seen = new Set()
+  let dogInside = false
+  let moved = 0
+  const tDog = Date.now()
+  while (Date.now() - tDog < 14000) {
+    const d = await page.evaluate(() => {
+      const { animals, world } = window.__wildcity.session
+      const a = animals[0]
+      return {
+        s: a.state,
+        x: a.position.x,
+        z: a.position.z,
+        inB: !!world.buildingAt(a.position.x, a.position.z),
+      }
+    })
+    seen.add(d.s)
+    if (d.inB) dogInside = true
+    moved = Math.max(moved, Math.hypot(d.x - dogStart[0].x, d.z - dogStart[0].z))
+    await sleep(200)
+  }
+  check(
+    'dog wanders independently (IDLE and WANDER, moves away)',
+    seen.has('IDLE') && seen.has('WANDER') && moved > 4,
+    `states=${[...seen]} moved=${moved.toFixed(1)}m`,
+  )
+  check('dog never enters a building', !dogInside)
+
+  // Frame the dog for a screenshot.
+  await page.evaluate(() => {
+    const { animals, player, camera } = window.__wildcity.session
+    const d = animals[0].position
+    player.x = d.x
+    player.z = d.z + 2.5
+    player.vx = player.vz = 0
+    camera.yaw = 0
+    camera.pitch = 0.45
+    camera.distance = 7
+  })
+  await sleep(1500)
+  await page.screenshot({ path: `${OUT}/phase3-dog.png` })
+  check(
+    'GLB model loaded without fallback warning',
+    !warnings.some((w) => w.includes('failed to load')),
+    warnings.join('|'),
+  )
 
   check('no console/page errors', errors.length === 0, errors.slice(0, 3).join(' | '))
   void PHASE

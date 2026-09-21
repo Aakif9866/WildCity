@@ -37,6 +37,14 @@ Most `game/` folders are empty placeholders until their phase.
 `World` (game/world) is the single query layer: `resolveCircle` (collision), `zoneAt`, `freeDistance`
 (camera clearance), `heightAt` (terrain hook, flat for now).
 
+## Animals (Phase 3)
+
+`Animal` (data) is advanced by `updateAnimal` (game/ai/fsm.ts: state handlers) using `NavGrid`
+(pathfinding) and `stepAlongPath` (locomotion). Species behave differently through
+`SpeciesConfig` data, not code branches. Rendering goes through the `AnimalVisual` interface:
+`ProceduralAnimal` (merged boxes, driven by `poseFor`) or `GlbAnimal` (clips via AnimationMixer),
+chosen per species by `modelUrl` with an error boundary falling back to procedural.
+
 ## Key decisions
 
 - **Simulation outside React.** Per-frame state (player, animals) lives in plain modules/refs and is

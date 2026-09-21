@@ -32,3 +32,7 @@ JS gzip: app 113 KB, three 192 KB.
 ## Phase 2
 
 23 draw calls (city 10 + player 4 + boundary 4 + misc), ~26k triangles. Movement/collision cost is negligible (grid lookups).
+
+## Phase 3
+
+Nav grid: 250x250 cells built once at load (well under 1 s in tests). A* capped at 12k expansions (~ms). One dog = 4 meshes (GLB) — unmerged per-group; the procedural rig is the same 4 draws. dog.glb = 24 KB.

@@ -25,17 +25,30 @@
   - Pause menu (Esc / pointer-lock loss), HUD hints, faint boundary walls
   - 31 unit tests; smoke: walk/run/jump/wall/bounds/pause all verified in Chrome
 
+- **Phase 3 — First animal** (branch `phase-3-first-animal`)
+  - `Animal` entity (all spec fields), `SpeciesConfig` as data, rig JSON per species
+  - `NavGrid` (2 m cells): walkability with wall clearance, derived TREE zone, A* with per-species
+    zone costs + line-of-sight smoothing, weighted random spot picking
+  - Spawn rules (walkable, preferred zones, away from player), locomotion (turn-rate limited, slows in turns)
+  - FSM skeleton (IDLE/WANDER; other states fall back to idle until Phase 4)
+  - Rendering: merged procedural rig (few draw calls) **and** real GLB loading with animation
+    mixer; `AnimalErrorBoundary` falls back to the procedural rig if a model is missing/corrupt
+  - `npm run models` bakes rig JSON -> GLB (idle/walk/run clips) via `@gltf-transform/core`
+  - 49 unit tests; smoke verifies the GLB is served, the dog wanders and never enters a building
+
 ## In progress
 
 Nothing.
 
 ## Next
 
-- Phase 3 — first animal: GLB loading, animation, wandering dog
+- Phase 4 — animal AI: needs (hunger/energy), REST, SLEEP, EAT, FLEE, curiosity
 
 ## Known issues
 
 - React pinned to 19.2.x due to R3F peer range (see ARCHITECTURE.md).
 - Cloudflare Pages not yet connected (needs the user's Cloudflare account).
-- Trees have no collision (player walks through them).
+- Trees have no collision (player and animals walk through them); the camera can sit inside a canopy.
+- Dog GLB is generated from the same box rig (looks identical to the fallback); real art can replace it.
+- Three.js logs a deprecation for `THREE.Clock` (from R3F internals) - harmless.
 - Pointer lock can't be verified in headless Chrome; drag-look fallback is what smoke covers.
