@@ -70,6 +70,7 @@ export function spawnAnimals(
         animation: 'idle',
         cooldown: 0,
         airborne: false,
+        attention: randRange(rng, 3, 12),
       })
     }
   }

@@ -193,6 +193,19 @@ describe('state transitions', () => {
     expect(a.animation).toBe('idle')
   })
 
+  it('a nap is a bout, not a coma: it ends even when the species stays inactive', () => {
+    const [a] = spawn(70) as [Animal]
+    a.energy = 80
+    startBehaviour('sleep', a, dog, makeCtx(70, 'night'))
+    const night = makeCtx(70, 'night')
+    a.stateTime = 30
+    updateAnimal(a, night, 0.1)
+    expect(a.state).toBe('SLEEP') // dog is inactive at night: keeps sleeping mid-bout
+    a.stateTime = 61
+    updateAnimal(a, night, 0.1)
+    expect(a.state).toBe('IDLE')
+  })
+
   it('sleeping animals are shown with the sleep animation', () => {
     const [a] = spawn(8) as [Animal]
     startBehaviour('sleep', a, dog, makeCtx(8, 'night'))

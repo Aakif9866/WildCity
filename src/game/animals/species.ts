@@ -44,6 +44,8 @@ export interface SpeciesConfig {
   foodZones: ZoneKind[]
   /** 0..1: how much it likes visiting water. */
   waterAffinity: number
+  /** How the species notices and reacts to a nearby (non-threatening) player. */
+  reaction: { detectionRadius: number; style: 'follow' | 'investigate' | 'ignore' }
   /** [min, max] metres of a typical wander hop: squirrels dart, monkeys roam. */
   wanderRange: [number, number]
   /** Multiplier on standing-around time: cats loaf, squirrels fidget. */
@@ -87,6 +89,7 @@ export const SPECIES: Record<SpeciesId, SpeciesConfig> = {
     activity: { morning: 0.8, day: 1, evening: 0.7, night: 0.15 },
     foodZones: ['COMMERCIAL', 'SIDEWALK', 'RESIDENTIAL'],
     waterAffinity: 0.5,
+    reaction: { detectionRadius: 14, style: 'follow' },
     wanderRange: [6, 30],
     idleScale: 1,
     strideScale: 1,
@@ -117,6 +120,7 @@ export const SPECIES: Record<SpeciesId, SpeciesConfig> = {
     activity: { morning: 0.5, day: 0.25, evening: 0.9, night: 1 },
     foodZones: ['RESIDENTIAL', 'COMMERCIAL'],
     waterAffinity: 0.2,
+    reaction: { detectionRadius: 10, style: 'investigate' },
     wanderRange: [4, 20],
     idleScale: 1.8,
     strideScale: 0.7,
@@ -145,6 +149,7 @@ export const SPECIES: Record<SpeciesId, SpeciesConfig> = {
     activity: { morning: 1, day: 0.7, evening: 0.5, night: 0.05 },
     foodZones: ['ROAD', 'SIDEWALK', 'COMMERCIAL'],
     waterAffinity: 0.4,
+    reaction: { detectionRadius: 8, style: 'ignore' },
     wanderRange: [3, 25],
     idleScale: 0.8,
     strideScale: 0.35,
@@ -173,6 +178,7 @@ export const SPECIES: Record<SpeciesId, SpeciesConfig> = {
     activity: { morning: 0.8, day: 1, evening: 0.5, night: 0.05 },
     foodZones: ['TREE', 'PARK', 'COMMERCIAL'],
     waterAffinity: 0.4,
+    reaction: { detectionRadius: 14, style: 'investigate' },
     wanderRange: [8, 35],
     idleScale: 0.8,
     strideScale: 1,
@@ -194,6 +200,7 @@ export const SPECIES: Record<SpeciesId, SpeciesConfig> = {
     activity: { morning: 1, day: 0.8, evening: 0.6, night: 0.05 },
     foodZones: ['TREE', 'PARK'],
     waterAffinity: 0.2,
+    reaction: { detectionRadius: 8, style: 'ignore' },
     wanderRange: [3, 12],
     idleScale: 0.4,
     strideScale: 0.35,

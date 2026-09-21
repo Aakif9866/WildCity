@@ -61,6 +61,13 @@ climb to cruise altitude on longer trips, and land on whatever is below the goal
 ground). Short hops between walkable spots stay on foot. `airborne` marks an active flight and
 drives the wing-flap animation; `settleToGround` guarantees a bird never hovers if its plan is cleared.
 
+## Interaction (Phase 6)
+
+`reactions.ts` (pure) decides whether a noticed player triggers FOLLOW/INVESTIGATE. The controller
+finds the nearest animal ~5x/s and pushes only changes to Zustand (`promptAnimalId`, `panelAnimalId`,
+`followAnimalId`, `observedId`); UI panels sample live animal values at 4 Hz. Follow mode simply
+swaps the camera target from the player to the animal in `PlayerController`.
+
 ## Key decisions
 
 - **Simulation outside React.** Per-frame state (player, animals) lives in plain modules/refs and is

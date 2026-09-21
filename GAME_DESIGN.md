@@ -32,3 +32,13 @@ Activity: birds morning, cats evening/night, dogs day.
 ## Later (not in MVP)
 
 Weather, discovery system, audio, mobile controls, vehicles, quests, saves, multiplayer.
+
+## Player/animal interaction (implemented)
+
+- Each species notices the player inside a detection radius. Sociable dogs tend to follow,
+  curious cats/monkeys come to look from a safe distance, pigeons and squirrels ignore you until
+  you get too close, then bolt. Running at animals scares everything; bold individuals tolerate more.
+- Animals that have reacted lose interest for a while (no pestering).
+- Press E within 5 m: panel with energy, hunger, mood, state and Observe / Follow / Interact.
+  Interact succeeds for trusting individuals; shy ones retreat; sleeping ones are left alone.
+- Follow: the camera tracks the animal until you press F or move.

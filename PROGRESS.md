@@ -56,13 +56,24 @@
   - `npm run models` now only bakes species that opt in with `"glb": true` (dog)
   - 87 unit tests incl. spec-matching species data, flight, and a 24 h / 22-animal soak test
 
+- **Phase 6 — Player/animal interaction** (branch `phase-6-interaction`)
+  - Per-species `reaction` (detection radius + follow / investigate / ignore); odds come from
+    personality (social -> follow, curiosity -> investigate); scared animals never approach
+  - New states: INVESTIGATE (approach to a personality-based stand-off distance, look at player),
+    FOLLOW (paces itself to the player), INTERACT; `attention` cooldown stops animals pestering the player
+  - Idle animals turn to look at a nearby player
+  - `[E] Inspect` prompt + ring marker, animal panel (energy/hunger bars, mood, state) with
+    Observe / Follow / Interact; Interact outcome depends on trust, sleeping/scared animals are left alone
+  - Follow mode: camera tracks the animal, F or any movement stops it; panel auto-closes when far away
+  - 104 unit tests; smoke drives the whole flow in Chrome
+
 ## In progress
 
 Nothing.
 
 ## Next
 
-- Phase 6 — player/animal interaction: detection radius, reactions, inspect panel, follow mode
+- Phase 7 — real city data: OSM (Overpass) -> local coordinates -> simplified geometry for Hyderabad
 
 ## Known issues
 

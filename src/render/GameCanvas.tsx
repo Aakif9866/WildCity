@@ -2,6 +2,7 @@ import { Canvas } from '@react-three/fiber'
 import { useMemo } from 'react'
 import { generateDemoCity } from '@/cities/demo'
 import { createSession } from '@/game/session'
+import { AnimalMarker } from '@/render/animals/AnimalMarker'
 import { Animals } from '@/render/animals/Animals'
 import { DebugProbe } from '@/render/DebugProbe'
 import { PlayerAvatar } from '@/render/PlayerAvatar'
@@ -9,7 +10,10 @@ import { PlayerController } from '@/render/PlayerController'
 import { Boundary } from '@/render/world/Boundary'
 import { CityScene } from '@/render/world/CityScene'
 import { useAppStore } from '@/state/appStore'
+import { AnimalPanel } from '@/ui/AnimalPanel'
+import { FollowBanner } from '@/ui/FollowBanner'
 import { Hud } from '@/ui/Hud'
+import { InteractPrompt } from '@/ui/InteractPrompt'
 import { PauseMenu } from '@/ui/PauseMenu'
 
 export function GameCanvas() {
@@ -27,10 +31,15 @@ export function GameCanvas() {
         <Boundary halfSize={session.city.metadata.halfSize} />
         <PlayerAvatar session={session} />
         <Animals session={session} />
+        <AnimalMarker session={session} kind="prompt" />
+        <AnimalMarker session={session} kind="observed" />
         <PlayerController session={session} />
         <DebugProbe session={session} />
       </Canvas>
       <Hud />
+      <InteractPrompt session={session} />
+      <FollowBanner session={session} />
+      <AnimalPanel session={session} />
       {phase === 'paused' && <PauseMenu session={session} />}
     </>
   )

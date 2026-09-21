@@ -15,7 +15,7 @@ export type AnimalState =
   | 'FOLLOW'
   | 'INTERACT'
 
-export type TargetKind = 'food' | 'water' | 'spot' | 'friend' | 'flee'
+export type TargetKind = 'food' | 'water' | 'spot' | 'friend' | 'flee' | 'player'
 
 /** Visual animation the renderer should show; derived from state + speed by the AI layer. */
 export type AnimationName = 'idle' | 'walk' | 'run' | 'eat' | 'sleep' | 'fly'
@@ -49,6 +49,8 @@ export interface Animal {
   animation: AnimationName
   /** Seconds until the animal may plan again after a failed plan (prevents per-frame A* retries). */
   cooldown: number
+  /** Seconds until the animal may take notice of the player again. */
+  attention: number
   /** True while flying between points (flying species only). */
   airborne: boolean
 }

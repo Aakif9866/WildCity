@@ -9,6 +9,8 @@ import { pickWeighted, randRange, type Rng } from '@/utils/random'
 import { behaviourWeights, type BehaviourKind } from './behaviour'
 import { updateNeeds } from './needs'
 import { distanceToPlayer, fleeDistance, isThreatened, type PlayerView } from './perception'
+import { chooseReaction, standoffDistance, yawToward } from './reactions'
+import { angleDelta } from '@/game/player/movement'
 
 export interface AIContext {
   world: World
@@ -243,7 +245,7 @@ export function decide(a: Animal, s: SpeciesConfig, ctx: AIContext): void {
   a.cooldown = 1
 }
 
-function startFlee(a: Animal, s: SpeciesConfig, ctx: AIContext): void {
+export function startFlee(a: Animal, s: SpeciesConfig, ctx: AIContext): void {
   const player = ctx.player
   if (!player) return
   const away = Math.atan2(a.position.z - player.z, a.position.x - player.x)
@@ -269,6 +271,13 @@ function startFlee(a: Animal, s: SpeciesConfig, ctx: AIContext): void {
 
 const idle: Handler = (a, s, ctx, dt) => {
   stop(a, dt)
+  // Notice the player: turn to look at them while they are close by.
+  if (
+    ctx.player &&
+    s.reaction.style !== 'ignore' &&
+    distanceToPlayer(a, ctx.player) < s.reaction.detectionRadius * 0.6
+  )
+    facePlayer(a, s, ctx, dt)
   // Livelier individuals spend less time standing around.
   const wait = (1.5 + (1 - a.vigor / 100) * 4) * s.idleScale
   if (a.stateTime > wait && a.cooldown <= 0) decide(a, s, ctx)
@@ -308,10 +317,15 @@ const rest: Handler = (a, _s, _ctx, dt) => {
   if (a.energy >= 75 || a.stateTime > 30) enterState(a, 'IDLE')
 }
 
+// Animals nap in bouts: even a species that is inactive all day (cats) wakes now and then
+// instead of being frozen for hours.
+const NAP_LIMIT = 60
+
 const sleep: Handler = (a, s, ctx, dt) => {
   stop(a, dt)
   const act = s.activity[ctx.time.phase]
-  if (a.stateTime > 10 && act >= 0.5 && a.energy > 50) enterState(a, 'IDLE')
+  const rested = a.energy > 50
+  if (a.stateTime > 10 && rested && (act >= 0.5 || a.stateTime > NAP_LIMIT)) enterState(a, 'IDLE')
 }
 
 const flee: Handler = (a, s, ctx, dt) => {
@@ -324,7 +338,131 @@ const flee: Handler = (a, s, ctx, dt) => {
   }
 }
 
-// INVESTIGATE / FOLLOW / INTERACT arrive with player interaction (Phase 6); until then they idle.
+/** Turn in place to face the player (looking at them). */
+function facePlayer(a: Animal, s: SpeciesConfig, ctx: AIContext, dt: number): void {
+  const p = ctx.player
+  if (!p) return
+  const want = yawToward(a.position.x, a.position.z, p.x, p.z)
+  const maxTurn = s.turnRate * dt
+  a.yaw += Math.max(-maxTurn, Math.min(maxTurn, angleDelta(a.yaw, want)))
+}
+
+const ATTENTION_AFTER = { investigate: 25, follow: 40, interact: 20 }
+
+/** Plan a route to a point `standoff` metres from the player, on the animal's side. */
+function planToPlayer(a: Animal, s: SpeciesConfig, ctx: AIContext, standoff: number): boolean {
+  const p = ctx.player
+  if (!p) return false
+  const dx = a.position.x - p.x
+  const dz = a.position.z - p.z
+  const d = Math.hypot(dx, dz) || 1
+  return planTo(a, s, ctx, p.x + (dx / d) * standoff, p.z + (dz / d) * standoff, 'player')
+}
+
+function startReaction(
+  kind: 'follow' | 'investigate',
+  a: Animal,
+  s: SpeciesConfig,
+  ctx: AIContext,
+): boolean {
+  if (!planToPlayer(a, s, ctx, kind === 'follow' ? 3 : standoffDistance(a, s))) return false
+  enterState(a, kind === 'follow' ? 'FOLLOW' : 'INVESTIGATE')
+  return true
+}
+
+const investigate: Handler = (a, s, ctx, dt) => {
+  const p = ctx.player
+  const done = (): void => {
+    clearPlan(a)
+    a.attention = ATTENTION_AFTER.investigate
+    enterState(a, 'IDLE')
+  }
+  if (!p || a.stateTime > 25) return done()
+  if (a.path.length > 0) {
+    // Player walked off? Re-aim, but not every frame.
+    if (
+      a.target &&
+      Math.hypot(a.target[0] - p.x, a.target[1] - p.z) > standoffDistance(a, s) + 5 &&
+      a.cooldown <= 0
+    ) {
+      if (!planToPlayer(a, s, ctx, standoffDistance(a, s))) return done()
+      a.cooldown = 1
+    }
+    if (move(a, s, ctx, s.walkSpeed * 1.15, dt) === 'arrived') {
+      clearPlan(a)
+      a.stateTime = 0 // start the "looking at you" timer
+    }
+    return
+  }
+  stop(a, dt)
+  facePlayer(a, s, ctx, dt)
+  if (a.stateTime > 4 + a.curiosity / 25) done()
+}
+
+/** Match the player's pace, and hurry in proportion to how far behind we've fallen. */
+const followSpeed = (s: SpeciesConfig, playerSpeed: number, gap: number): number =>
+  Math.min(s.runSpeed, Math.max(s.walkSpeed * 1.25, playerSpeed * 1.1 + Math.max(0, gap - 4) * 0.6))
+
+const follow: Handler = (a, s, ctx, dt) => {
+  const p = ctx.player
+  if (!p || a.stateTime > 40 || distanceToPlayer(a, p) > 30 || a.energy < 15) {
+    clearPlan(a)
+    a.attention = ATTENTION_AFTER.follow
+    enterState(a, 'IDLE')
+    return
+  }
+  const d = distanceToPlayer(a, p)
+  if (d > 3.6) {
+    if ((a.path.length === 0 || a.cooldown <= 0) && planToPlayer(a, s, ctx, 3)) a.cooldown = 0.8
+    if (a.path.length > 0) move(a, s, ctx, followSpeed(s, p.speed, d), dt)
+  } else {
+    clearPlan(a)
+    stop(a, dt)
+    facePlayer(a, s, ctx, dt)
+  }
+}
+
+const interact: Handler = (a, s, ctx, dt) => {
+  stop(a, dt)
+  facePlayer(a, s, ctx, dt)
+  if (a.stateTime > 4.5) {
+    a.attention = ATTENTION_AFTER.interact
+    enterState(a, 'IDLE')
+  }
+}
+
+export interface InteractionResult {
+  accepted: boolean
+  message: string
+}
+
+const ACCEPT_LINES: Record<string, string> = {
+  dog: 'Wags its tail and leans in for attention.',
+  cat: 'Sniffs your hand, then allows a scratch.',
+  pigeon: 'Coos softly and pecks near your feet.',
+  monkey: 'Chatters curiously and inspects your hands.',
+  squirrel: 'Freezes, tail twitching, and lets you watch it.',
+}
+
+/**
+ * The player reaches out to an animal. Trusting (curious + sociable) individuals accept;
+ * shy ones retreat. Sleeping or already-frightened animals are left alone.
+ */
+export function interactWithAnimal(a: Animal, ctx: AIContext): InteractionResult {
+  const s = SPECIES[a.species]
+  if (a.state === 'SLEEP')
+    return { accepted: false, message: 'It is fast asleep. Better not disturb it.' }
+  if (a.state === 'FLEE') return { accepted: false, message: 'It is too frightened to come near.' }
+  const trust = (a.curiosity + a.social) / 200
+  if (ctx.rng() < 0.25 + 0.75 * trust) {
+    clearPlan(a)
+    enterState(a, 'INTERACT')
+    return { accepted: true, message: ACCEPT_LINES[a.species] ?? 'It accepts your company.' }
+  }
+  startFlee(a, s, ctx)
+  return { accepted: false, message: 'It does not trust you yet and backs away.' }
+}
+
 const HANDLERS: Partial<Record<AnimalState, Handler>> = {
   IDLE: idle,
   WANDER: walking,
@@ -334,6 +472,9 @@ const HANDLERS: Partial<Record<AnimalState, Handler>> = {
   REST: rest,
   SLEEP: sleep,
   FLEE: flee,
+  INVESTIGATE: investigate,
+  FOLLOW: follow,
+  INTERACT: interact,
 }
 
 function animationFor(a: Animal): AnimationName {
@@ -350,12 +491,17 @@ export function updateAnimal(a: Animal, ctx: AIContext, dt: number): void {
   if (!s) return
   a.stateTime += dt
   a.cooldown = Math.max(0, a.cooldown - dt)
+  a.attention -= dt
   updateNeeds(a, s, dt)
   // A flight cut short by a state change (e.g. sudden exhaustion) must still end on the ground.
   if (a.airborne && a.path.length === 0) settleToGround(a, dt, ctx.world)
 
   if (a.state !== 'FLEE' && a.cooldown <= 0 && isThreatened(a, s, ctx.player)) startFlee(a, s, ctx)
-  if (a.state !== 'FLEE' || a.path.length > 0 || a.stateTime > 0)
-    (HANDLERS[a.state] ?? idle)(a, s, ctx, dt)
+  if (a.attention <= 0 && ctx.player && (a.state === 'IDLE' || a.state === 'WANDER')) {
+    const reaction = chooseReaction(a, s, ctx.player, ctx.rng)
+    // Not interested (or no route): look again soon rather than every frame.
+    if (!reaction || !startReaction(reaction, a, s, ctx)) a.attention = 4
+  }
+  ;(HANDLERS[a.state] ?? idle)(a, s, ctx, dt)
   a.animation = animationFor(a)
 }

@@ -3,6 +3,8 @@ import { createCameraRig, type CameraRig } from '@/game/camera/orbitRig'
 import type { KeyboardMouseInput } from '@/game/input/KeyboardMouseInput'
 import { spawnAnimals } from '@/game/animals/spawn'
 import { DEFAULT_SPAWN_PLAN } from '@/game/animals/spawnPlan'
+import type { AIContext } from '@/game/ai/fsm'
+import { yawToward } from '@/game/ai/reactions'
 import type { Animal } from '@/game/animals/types'
 import type { DayPhase } from '@/game/time/dayPhase'
 import { NavGrid } from '@/game/navigation/NavGrid'
@@ -33,6 +35,23 @@ export interface GameSession {
 /** Explicit mutator: session is intentionally mutable game state, not React state. */
 export function attachInput(session: GameSession, input: KeyboardMouseInput | null): void {
   session.input = input
+}
+
+/** Turn the orbit camera to look from the player towards a point (mutator: session is mutable game state). */
+export function aimCameraAt(session: GameSession, x: number, z: number): void {
+  session.camera.yaw = yawToward(session.player.x, session.player.z, x, z)
+}
+
+/** Everything the animal AI needs to know about the world this frame. */
+export function aiContextOf(session: GameSession): AIContext {
+  return {
+    world: session.world,
+    nav: session.nav,
+    rng: session.rng,
+    time: session.time,
+    player: session.player,
+    animals: session.animals,
+  }
 }
 
 export function createSession(city: CityData, seed = 1234): GameSession {

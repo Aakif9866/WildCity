@@ -17,6 +17,15 @@ const check = (name, ok, detail = '') => {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? `  (${detail})` : ''}`)
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+const waitFor2 = async (fn, ms) => {
+  const t0 = Date.now()
+  while (Date.now() - t0 < ms) {
+    const v = await fn()
+    if (v) return v
+    await sleep(200)
+  }
+  return null
+}
 
 const server = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort'], {
   stdio: 'ignore',
@@ -435,6 +444,195 @@ try {
 
   const info5 = await page.evaluate(() => window.__wildcity.renderInfo())
   check('draw calls stay under budget with all animals', info5.calls < 200, JSON.stringify(info5))
+
+  // ---- Phase 6: player <-> animal interaction ----
+  const ui = () =>
+    page.evaluate(() => {
+      const st = window.__wildcity.store.getState()
+      return {
+        prompt: st.promptAnimalId,
+        panel: st.panelAnimalId,
+        follow: st.followAnimalId,
+        observed: st.observedId,
+      }
+    })
+  // Park a calm, sociable dog 3 m from the player on open road, held idle.
+  await page.evaluate(() => {
+    const S = window.__wildcity.session
+    S.timeScale = 1
+    const d = S.animals.find((a) => a.species === 'dog')
+    // Isolate the test dog: park every other animal far away and hold it still.
+    S.animals.forEach((o, i) => {
+      if (o === d) return
+      Object.assign(o, {
+        state: 'IDLE',
+        stateTime: 0,
+        cooldown: 999,
+        attention: 999,
+        path: [],
+        airborne: false,
+        speed: 0,
+      })
+      o.position.x = 150 + (i % 5) * 10
+      o.position.z = 150 + Math.floor(i / 5) * 10
+      o.position.y = 0
+    })
+    Object.assign(d, {
+      state: 'IDLE',
+      stateTime: 0,
+      cooldown: 999,
+      attention: 999,
+      path: [],
+      airborne: false,
+      hunger: 20,
+      energy: 90,
+      social: 100,
+      curiosity: 100,
+    })
+    d.position.x = 2.5 // off to the side so the avatar doesn't hide it from the camera
+    d.position.z = 12
+    d.position.y = 0
+    S.player.x = 0
+    S.player.z = 16
+    S.player.vx = S.player.vz = 0
+    S.camera.yaw = 0
+    S.camera.pitch = 0.3
+    S.camera.distance = 7
+    window.__dogId = d.id
+  })
+  await sleep(700)
+  const near = await ui()
+  check(
+    'prompt appears near an animal',
+    near.prompt?.startsWith('dog') && (await page.getByText('Inspect Dog').isVisible()),
+    JSON.stringify(near),
+  )
+  await page.screenshot({ path: `${OUT}/phase6-prompt.png` })
+
+  await page.keyboard.press('KeyE')
+  await sleep(400)
+  check(
+    'E opens the animal panel with stats and actions',
+    (await ui()).panel?.startsWith('dog') &&
+      (await page.getByText('Energy').isVisible()) &&
+      (await page.getByRole('button', { name: 'Follow' }).isVisible()),
+  )
+  await page.screenshot({ path: `${OUT}/phase6-panel.png` })
+
+  await page.getByRole('button', { name: 'Interact' }).click()
+  await sleep(300)
+  const interactState = await page.evaluate(
+    () => window.__wildcity.session.animals.find((a) => a.id === window.__dogId).state,
+  )
+  const msgShown = await page.locator('p.italic').isVisible()
+  check(
+    'Interact gives feedback and the dog responds',
+    msgShown && ['INTERACT', 'FLEE'].includes(interactState),
+    `dog=${interactState}`,
+  )
+
+  await page.getByRole('button', { name: 'Observe' }).click()
+  await sleep(300)
+  check('Observe highlights the animal', (await ui()).observed?.startsWith('dog'))
+
+  await page.keyboard.press('KeyE')
+  await sleep(300)
+  check('E again closes the panel', (await ui()).panel === null)
+
+  // Follow: camera tracks the dog; F stops it.
+  await page.evaluate(() => {
+    const S = window.__wildcity.session
+    const d = S.animals.find((a) => a.id === window.__dogId)
+    Object.assign(d, { state: 'IDLE', cooldown: 999, attention: 999, path: [] })
+    S.player.x = d.position.x
+    S.player.z = d.position.z + 3
+    S.player.vx = S.player.vz = 0
+  })
+  await sleep(500)
+  await page.keyboard.press('KeyE')
+  await sleep(300)
+  await page.getByRole('button', { name: 'Follow' }).click()
+  await sleep(300)
+  check(
+    'Follow shows the banner and hides the panel',
+    (await ui()).follow?.startsWith('dog') &&
+      (await page.getByText('to stop').isVisible()) &&
+      (await ui()).panel === null,
+  )
+
+  // Make the dog walk somewhere; the camera must go with it while the player stays put.
+  const before = await page.evaluate(() => {
+    const S = window.__wildcity.session
+    const d = S.animals.find((a) => a.id === window.__dogId)
+    d.cooldown = 0
+    d.attention = 999
+    d.state = 'WANDER'
+    d.path = [[d.position.x + 20, d.position.z]]
+    d.pathIndex = 0
+    d.target = d.path[0]
+    return { px: S.player.x, dx: d.position.x }
+  })
+  await sleep(4000)
+  const fol = await page.evaluate(() => {
+    const S = window.__wildcity.session
+    const d = S.animals.find((a) => a.id === window.__dogId)
+    return { px: S.player.x, dx: d.position.x, tx: S.camera.tx, tz: S.camera.tz, dz: d.position.z }
+  })
+  check(
+    'camera follows the dog while the player stays still',
+    Math.abs(fol.px - before.px) < 0.5 && fol.dx > before.dx + 3 && Math.abs(fol.tx - fol.dx) < 2,
+    JSON.stringify({ before, fol }),
+  )
+  await page.screenshot({ path: `${OUT}/phase6-follow.png` })
+
+  await page.keyboard.press('KeyF')
+  await sleep(300)
+  check('F stops following', (await ui()).follow === null)
+
+  // Movement also ends following.
+  await page.evaluate(() => {
+    const S = window.__wildcity.session
+    const st = window.__wildcity.store.getState()
+    st.startFollow(window.__dogId)
+    void S
+  })
+  await sleep(300)
+  await hold(['KeyW'], 300)
+  check('moving ends following', (await ui()).follow === null)
+
+  // Spontaneous reaction: a sociable dog that has noticed the player does something about it.
+  await page.evaluate(() => {
+    const S = window.__wildcity.session
+    const d = S.animals.find((a) => a.id === window.__dogId)
+    Object.assign(d, {
+      state: 'IDLE',
+      stateTime: 0,
+      cooldown: 0,
+      attention: 0,
+      path: [],
+      social: 100,
+      curiosity: 100,
+    })
+    d.position.x = -30
+    d.position.z = 0
+    S.player.x = -20
+    S.player.z = 0
+    S.player.vx = S.player.vz = 0
+  })
+  const dogId = await page.evaluate(() => window.__dogId)
+  const reacted = await waitFor2(
+    () =>
+      page.evaluate((id) => {
+        const d = window.__wildcity.session.animals.find((a) => a.id === id)
+        return ['FOLLOW', 'INVESTIGATE'].includes(d.state) ? d.state : null
+      }, dogId),
+    25000,
+  )
+  check(
+    'a sociable dog notices the player and comes over (FOLLOW/INVESTIGATE)',
+    !!reacted,
+    String(reacted),
+  )
 
   check('no console/page errors', errors.length === 0, errors.slice(0, 3).join(' | '))
   void PHASE
