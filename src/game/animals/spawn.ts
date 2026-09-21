@@ -70,9 +70,11 @@ export function spawnAnimals(
         curiosity: inRange(rng, species.personality.curiosity),
         social: inRange(rng, species.personality.social),
         target: null,
+        targetKind: null,
         path: [],
         pathIndex: 0,
         animation: 'idle',
+        cooldown: 0,
       })
     }
   }

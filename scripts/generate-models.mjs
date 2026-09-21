@@ -81,9 +81,16 @@ function box([w, h, d], [px, py, pz], color, out) {
 }
 
 const quatY = (a) => [0, Math.sin(a / 2), 0, Math.cos(a / 2)]
+const quatX = (a) => [Math.sin(a / 2), 0, 0, Math.cos(a / 2)]
 
 // [duration s, stride amplitude 0..1, wag rate]
-const CLIPS = { idle: [2, 0, 4], walk: [0.8, 1, 8], run: [0.45, 1.4, 12] }
+const CLIPS = {
+  idle: [2, 0, 4],
+  walk: [0.8, 1, 8],
+  run: [0.45, 1.4, 12],
+  eat: [1, 0, 4],
+  sleep: [2, 0, 0],
+}
 
 function writeSpecies(file) {
   const id = file.replace('.json', '')
@@ -147,7 +154,9 @@ function writeSpecies(file) {
         } else if (group.anim === 'wag') {
           // Whole number of wag cycles per clip so it loops seamlessly.
           const cycles = Math.max(1, Math.round((wagRate * dur) / (Math.PI * 2)))
-          q = quatY(Math.sin((i / steps) * cycles * Math.PI * 2) * 0.45)
+          q = name === 'sleep' ? q : quatY(Math.sin((i / steps) * cycles * Math.PI * 2) * 0.45)
+        } else if (group.anim === 'head' && name === 'eat') {
+          q = quatX(0.5 + Math.sin((i / steps) * 6 * Math.PI * 2) * 0.2)
         }
         trans.push(group.pivot[0] + dx, group.pivot[1] + dy, group.pivot[2] + dz)
         rot.push(...q)

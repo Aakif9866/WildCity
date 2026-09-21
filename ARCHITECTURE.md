@@ -45,6 +45,14 @@ Most `game/` folders are empty placeholders until their phase.
 `ProceduralAnimal` (merged boxes, driven by `poseFor`) or `GlbAnimal` (clips via AnimationMixer),
 chosen per species by `modelUrl` with an error boundary falling back to procedural.
 
+## Animal AI (Phase 4)
+
+Each tick: `updateNeeds` -> flee check (`perception`) -> state handler. When idle, `decide` either
+applies a hard override (starving / exhausted) or samples from `behaviourWeights` (pure; needs x
+personality x time-of-day x surroundings). `startBehaviour` sets up a plan (A* route + `targetKind`);
+on arrival the handler picks the follow-up state from `targetKind` (food -> EAT, water -> DRINK).
+Failed plans set `cooldown` so a cornered animal doesn't re-run A* every frame.
+
 ## Key decisions
 
 - **Simulation outside React.** Per-frame state (player, animals) lives in plain modules/refs and is

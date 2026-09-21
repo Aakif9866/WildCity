@@ -4,6 +4,7 @@ import type { KeyboardMouseInput } from '@/game/input/KeyboardMouseInput'
 import { spawnAnimals } from '@/game/animals/spawn'
 import { DEFAULT_SPAWN_PLAN } from '@/game/animals/spawnPlan'
 import type { Animal } from '@/game/animals/types'
+import type { DayPhase } from '@/game/time/dayPhase'
 import { NavGrid } from '@/game/navigation/NavGrid'
 import { createPlayer, type PlayerState } from '@/game/player/movement'
 import { World } from '@/game/world/World'
@@ -21,6 +22,10 @@ export interface GameSession {
   camera: CameraRig
   animals: Animal[]
   rng: Rng
+  /** Time of day; a fixed midday until the day/night clock arrives (Phase 9). */
+  time: { phase: DayPhase }
+  /** Simulation speed multiplier for animals (1 = real time). Handy for tests and profiling. */
+  timeScale: number
   /** Set by the controller once the canvas exists. */
   input: KeyboardMouseInput | null
 }
@@ -43,6 +48,8 @@ export function createSession(city: CityData, seed = 1234): GameSession {
     camera: createCameraRig(yaw, x, z),
     animals: spawnAnimals(DEFAULT_SPAWN_PLAN, nav, rng, { x, z }),
     rng,
+    time: { phase: 'day' },
+    timeScale: 1,
     input: null,
   }
 }

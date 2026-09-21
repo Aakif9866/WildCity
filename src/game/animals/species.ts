@@ -1,4 +1,5 @@
 import type { ZoneKind } from '@/cities/types'
+import type { DayPhase } from '@/game/time/dayPhase'
 import { parseRig, type CoatPalette, type RigDef } from './rig'
 import dogRig from './rigs/dog.json'
 import type { SpeciesId } from './types'
@@ -20,6 +21,25 @@ export interface SpeciesConfig {
   zonePreference: Partial<Record<ZoneKind, number>>
   /** Convenience alias of rig.coats. */
   coats: CoatPalette[]
+  needs: {
+    /** Hunger points gained per second (0..100 scale). */
+    hungerPerSec: number
+    /** Energy points lost per second while walking / running. */
+    energyWalk: number
+    energyRun: number
+    /** Energy points regained per second while resting (sleeping is 1.5x). */
+    restRegen: number
+  }
+  awareness: {
+    /** Base distance at which a walking player scares this species (before personality). */
+    fleeRadius: number
+  }
+  /** How active the species is in each phase of the day, 0..1. Low values make it sleep. */
+  activity: Record<DayPhase, number>
+  /** Zones where this species finds food. */
+  foodZones: ZoneKind[]
+  /** 0..1: how much it likes visiting water. */
+  waterAffinity: number
   rig: RigDef
   /** Optional GLB. If it is missing or fails to load, the procedural rig is used. */
   modelUrl?: string
@@ -48,6 +68,11 @@ export const SPECIES: Record<'dog', SpeciesConfig> = {
       ROAD: 0.1,
     },
     coats: dogParsed.coats,
+    needs: { hungerPerSec: 0.3, energyWalk: 0.18, energyRun: 1.1, restRegen: 2.2 },
+    awareness: { fleeRadius: 3 },
+    activity: { morning: 0.8, day: 1, evening: 0.7, night: 0.15 },
+    foodZones: ['COMMERCIAL', 'SIDEWALK', 'RESIDENTIAL'],
+    waterAffinity: 0.5,
     rig: dogParsed,
     modelUrl: '/models/dog.glb',
   },

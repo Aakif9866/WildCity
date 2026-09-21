@@ -231,8 +231,8 @@ try {
     await sleep(200)
   }
   check(
-    'dog wanders independently (IDLE and WANDER, moves away)',
-    seen.has('IDLE') && seen.has('WANDER') && moved > 4,
+    'dog acts independently (changes behaviour, moves away)',
+    seen.size >= 2 && moved > 4,
     `states=${[...seen]} moved=${moved.toFixed(1)}m`,
   )
   check('dog never enters a building', !dogInside)
@@ -255,6 +255,89 @@ try {
     !warnings.some((w) => w.includes('failed to load')),
     warnings.join('|'),
   )
+
+  // ---- Phase 4: animal AI ----
+  const dogNow = () =>
+    page.evaluate(() => {
+      const a = window.__wildcity.session.animals[0]
+      return {
+        s: a.state,
+        hunger: a.hunger,
+        energy: a.energy,
+        x: a.position.x,
+        z: a.position.z,
+        k: a.targetKind,
+        anim: a.animation,
+      }
+    })
+  const waitFor = async (pred, ms) => {
+    const t0 = Date.now()
+    while (Date.now() - t0 < ms) {
+      const d = await dogNow()
+      if (pred(d)) return d
+      await sleep(150)
+    }
+    return null
+  }
+  const setDog = (props) =>
+    page.evaluate((p) => Object.assign(window.__wildcity.session.animals[0], p), props)
+  await page.evaluate(() => (window.__wildcity.session.timeScale = 6))
+
+  await setDog({ hunger: 92, state: 'IDLE', stateTime: 99, cooldown: 0 })
+  const sawFood = await waitFor((d) => d.k === 'food' || d.s === 'EAT', 15000)
+  check('hungry dog goes looking for food', !!sawFood, JSON.stringify(sawFood))
+  const ate = await waitFor((d) => d.s === 'EAT', 60000)
+  check(
+    'dog reaches food and eats (eat animation)',
+    !!ate && ate.anim === 'eat',
+    JSON.stringify(ate),
+  )
+  const fed = await waitFor((d) => d.hunger < 50, 30000)
+  check('eating reduces hunger', !!fed, `hunger=${fed?.hunger?.toFixed(0)}`)
+
+  await setDog({ energy: 4, hunger: 5, state: 'IDLE', stateTime: 99, cooldown: 0 })
+  const rested = await waitFor((d) => d.s === 'REST', 15000)
+  check('exhausted dog rests', !!rested, JSON.stringify(rested))
+  const recovered = await waitFor((d) => d.energy > 60, 40000)
+  check('resting restores energy', !!recovered, `energy=${recovered?.energy?.toFixed(0)}`)
+
+  // Startle a shy dog by running at it.
+  await page.evaluate(() => (window.__wildcity.session.timeScale = 1))
+  await setDog({
+    curiosity: 5,
+    social: 5,
+    hunger: 5,
+    energy: 100,
+    state: 'IDLE',
+    stateTime: 0,
+    cooldown: 0,
+    path: [],
+  })
+  await page.evaluate(() => {
+    const { animals, player, camera } = window.__wildcity.session
+    const d = animals[0].position
+    player.x = d.x
+    player.z = d.z + 9
+    player.vx = player.vz = 0
+    camera.yaw = 0 // forward = -z, towards the dog
+  })
+  await sleep(300)
+  const dist0 = await page.evaluate(() => {
+    const { animals, player } = window.__wildcity.session
+    return Math.hypot(animals[0].position.x - player.x, animals[0].position.z - player.z)
+  })
+  await page.keyboard.down('ShiftLeft')
+  await page.keyboard.down('KeyW')
+  const fled = await waitFor((d) => d.s === 'FLEE', 4000)
+  await page.keyboard.up('KeyW')
+  await page.keyboard.up('ShiftLeft')
+  check(
+    'a running player startles the dog into FLEE',
+    !!fled,
+    `start dist=${dist0.toFixed(1)} ${JSON.stringify(fled)}`,
+  )
+  const calm = await waitFor((d) => d.s !== 'FLEE', 20000)
+  check('dog calms down after fleeing', !!calm)
 
   check('no console/page errors', errors.length === 0, errors.slice(0, 3).join(' | '))
   void PHASE

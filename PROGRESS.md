@@ -36,13 +36,24 @@
   - `npm run models` bakes rig JSON -> GLB (idle/walk/run clips) via `@gltf-transform/core`
   - 49 unit tests; smoke verifies the GLB is served, the dog wanders and never enters a building
 
+- **Phase 4 — Animal AI** (branch `phase-4-animal-ai`)
+  - Needs: hunger (rises) and energy (drains when moving, recovers resting), scaled by personality
+  - Full FSM for IDLE, WANDER, MOVE_TO_TARGET, EAT, DRINK, REST, SLEEP, FLEE
+    (INVESTIGATE/FOLLOW/INTERACT arrive in Phase 6)
+  - `behaviourWeights`: pure weighted choice from needs, personality (vigor/curiosity/social),
+    time-of-day activity and surroundings; hard needs override (starving -> food, exhausted -> rest)
+  - Perception: flee distance depends on boldness, player speed, sleep; `cooldown` stops per-frame A* retries
+  - `DayPhase` + per-species `activity` in place; session time is a fixed midday until Phase 9
+  - Derived `moodOf` for the UI; `session.timeScale` for testing/profiling
+  - 69 unit tests incl. a 10-minute population soak test; smoke covers hunger->eat, exhaustion->rest, flee
+
 ## In progress
 
 Nothing.
 
 ## Next
 
-- Phase 4 — animal AI: needs (hunger/energy), REST, SLEEP, EAT, FLEE, curiosity
+- Phase 5 — multiple animals: cat, pigeon (flying), monkey, squirrel with species-specific behaviour
 
 ## Known issues
 

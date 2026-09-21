@@ -283,6 +283,47 @@ export class NavGrid {
     return out
   }
 
+  /** Angle (yaw convention, 0 = -z) towards the nearest cell of `zone` within `dist`, or null. */
+  directionToZone(x: number, z: number, zone: ZoneKind, dist: number): number | null {
+    let best: number | null = null
+    let bestD = Infinity
+    for (let k = 0; k < 16; k++) {
+      const a = (k / 16) * Math.PI * 2
+      for (let d = this.cell; d <= dist; d += this.cell) {
+        if (this.zoneAt(x + Math.cos(a) * d, z + Math.sin(a) * d) === zone) {
+          if (d < bestD) {
+            bestD = d
+            best = Math.atan2(-Math.cos(a), -Math.sin(a))
+          }
+          break
+        }
+      }
+    }
+    return best
+  }
+
+  /**
+   * Like randomSpot but with an arbitrary acceptance test (e.g. "next to water").
+   */
+  randomSpotWhere(
+    cx: number,
+    cz: number,
+    minR: number,
+    maxR: number,
+    rng: Rng,
+    accept: (x: number, z: number) => boolean,
+    tries = 30,
+  ): Vec2 | null {
+    for (let t = 0; t < tries; t++) {
+      const a = rng() * Math.PI * 2
+      const r = minR + rng() * (maxR - minR)
+      const x = cx + Math.cos(a) * r
+      const z = cz + Math.sin(a) * r
+      if (this.isWalkable(x, z) && accept(x, z)) return [x, z]
+    }
+    return null
+  }
+
   /**
    * Sample walkable spots in an annulus and pick one weighted by `weight(zone)`. Cheap and
    * good enough for "where would I like to go next" decisions.
