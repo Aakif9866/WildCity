@@ -1,9 +1,8 @@
 import type { GameSession } from '@/game/session'
 import { useAppStore } from '@/state/appStore'
 
-export function PauseMenu({ session }: { session: GameSession }) {
+export function PauseMenu({ session, onQuit }: { session: GameSession; onQuit: () => void }) {
   const resume = useAppStore((s) => s.resume)
-  const setPhase = useAppStore((s) => s.setPhase)
 
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-slate-950/70 text-white">
@@ -17,10 +16,7 @@ export function PauseMenu({ session }: { session: GameSession }) {
       >
         Resume
       </button>
-      <button
-        className="rounded bg-white/15 px-6 py-2 hover:bg-white/25"
-        onClick={() => setPhase('menu')}
-      >
+      <button className="rounded bg-white/15 px-6 py-2 hover:bg-white/25" onClick={onQuit}>
         Quit to menu
       </button>
     </div>

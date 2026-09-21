@@ -13,7 +13,8 @@
     "test": "vitest run",
     "typecheck": "tsc -b",
     "smoke": "npm run build && node scripts/smoke.mjs",
-    "models": "node scripts/generate-models.mjs"
+    "models": "node scripts/generate-models.mjs",
+    "city": "tsx --tsconfig tsconfig.app.json scripts/build-city.ts"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.8",
@@ -40,6 +41,7 @@
     "playwright-core": "^1.63.0",
     "prettier": "^3.9.8",
     "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.15",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.70.1",
     "vite": "^8.3.0",

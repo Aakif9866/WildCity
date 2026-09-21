@@ -17,6 +17,11 @@ const check = (name, ok, detail = '') => {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? `  (${detail})` : ''}`)
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+const appears = (locator, timeout = 8000) =>
+  locator.waitFor({ state: 'visible', timeout }).then(
+    () => true,
+    () => false,
+  )
 const waitFor2 = async (fn, ms) => {
   const t0 = Date.now()
   while (Date.now() - t0 < ms) {
@@ -65,7 +70,7 @@ try {
     if (m.type() === 'warning') warnings.push(m.text())
   })
 
-  await page.goto(`http://localhost:${PORT}/?debug`)
+  await page.goto(`http://localhost:${PORT}/?debug&city=demo`) // deterministic town for phases 1-6
   check('menu renders', await page.getByText('WILDCITY').first().isVisible())
   await page.screenshot({ path: `${OUT}/menu.png` })
 
@@ -633,6 +638,153 @@ try {
     !!reacted,
     String(reacted),
   )
+
+  // ---- Phase 7: real city data (Hyderabad) ----
+  const page2 = await browser.newPage({ viewport: { width: 1280, height: 720 } })
+  const errors2 = []
+  page2.on('pageerror', (e) => errors2.push(String(e)))
+  page2.on('console', (m) => m.type() === 'error' && errors2.push(m.text()))
+  // Slow one file down so the loading screen is observable.
+  await page2.route('**/cities/hyderabad/roads.json', async (route) => {
+    await sleep(900)
+    await route.continue()
+  })
+  await page2.goto(`http://localhost:${PORT}/?debug`)
+  const tLoad = Date.now()
+  await page2.getByRole('button', { name: 'Explore' }).click()
+  check('loading screen shows progress', await appears(page2.getByText('Loading roads…'), 3000))
+  await page2.waitForFunction(() => !!window.__wildcity?.session, null, { timeout: 60000 })
+  const loadMs = Date.now() - tLoad
+  await sleep(1500)
+  const real = await page2.evaluate(() => {
+    const S = window.__wildcity.session
+    const sp = S.city.metadata.spawn
+    return {
+      id: S.city.metadata.id,
+      b: S.city.buildings.length,
+      r: S.city.roads.length,
+      z: S.city.zones.length,
+      trees: S.city.trees.length,
+      animals: S.animals.length,
+      spawnZone: S.world.zoneAt(sp.x, sp.z),
+      spawnInBuilding: !!S.world.buildingAt(sp.x, sp.z),
+      attribution: S.city.metadata.attribution,
+      groundBad: S.animals.filter(
+        (a) => !['pigeon'].includes(a.species) && !S.nav.isWalkable(a.position.x, a.position.z),
+      ).length,
+    }
+  })
+  check(
+    'real Hyderabad data loads (buildings, roads, zones, trees)',
+    real.id === 'hyderabad' && real.b > 100 && real.r > 50 && real.z > 5 && real.trees > 20,
+    JSON.stringify(real),
+  )
+  check('load time is reasonable', loadMs < 15000, `${loadMs} ms`)
+  check(
+    'player spawns on a road, outside buildings',
+    !real.spawnInBuilding && ['ROAD', 'SIDEWALK'].includes(real.spawnZone),
+    real.spawnZone,
+  )
+  check(
+    'all 22 animals spawn, ground animals on walkable cells',
+    real.animals === 22 && real.groundBad === 0,
+    `animals=${real.animals} bad=${real.groundBad}`,
+  )
+  check(
+    'OpenStreetMap attribution is displayed',
+    await page2.getByText('OpenStreetMap contributors').isVisible(),
+  )
+  await page2.screenshot({ path: `${OUT}/phase7-hyderabad.png` })
+
+  // Walk and run around the real streets: never inside a building, never out of bounds.
+  let realInside = false
+  let realOut = false
+  const walkReal = async (yaw, ms) => {
+    await page2.evaluate((y) => (window.__wildcity.session.camera.yaw = y), yaw)
+    await page2.keyboard.down('ShiftLeft')
+    await page2.keyboard.down('KeyW')
+    const t = Date.now()
+    while (Date.now() - t < ms) {
+      const r = await page2.evaluate(() => {
+        const { player, world } = window.__wildcity.session
+        return {
+          inB: !!world.buildingAt(player.x, player.z),
+          inBounds: world.inBounds(player.x, player.z),
+        }
+      })
+      if (r.inB) realInside = true
+      if (!r.inBounds) realOut = true
+      await sleep(80)
+    }
+    await page2.keyboard.up('KeyW')
+    await page2.keyboard.up('ShiftLeft')
+  }
+  for (const yaw of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) await walkReal(yaw, 2500)
+  check('player collides with real buildings and stays in bounds', !realInside && !realOut)
+
+  // Animals roam the real streets.
+  await page2.evaluate(() => (window.__wildcity.session.timeScale = 4))
+  let animalInside = false
+  const seenStates = new Set()
+  const tA = Date.now()
+  while (Date.now() - tA < 20000) {
+    const r = await page2.evaluate(() => {
+      const { animals, world } = window.__wildcity.session
+      return animals.map((a) => ({
+        sp: a.species,
+        st: a.state,
+        inB: !!world.buildingAt(a.position.x, a.position.z),
+      }))
+    })
+    for (const a of r) {
+      if (a.sp !== 'pigeon' && a.inB) animalInside = true
+      seenStates.add(a.st)
+    }
+    await sleep(500)
+  }
+  await page2.evaluate(() => (window.__wildcity.session.timeScale = 1))
+  check(
+    'animals roam real streets without entering buildings',
+    !animalInside && seenStates.size >= 4,
+    `states=${[...seenStates]}`,
+  )
+  check(
+    'no console/page errors on the real city',
+    errors2.length === 0,
+    errors2.slice(0, 3).join(' | '),
+  )
+  await page2.close()
+
+  // Failure handling: server error -> friendly message -> recover into the demo town.
+  const page3 = await browser.newPage({ viewport: { width: 1280, height: 720 } })
+  await page3.route('**/cities/hyderabad/roads.json', (route) =>
+    route.fulfill({ status: 500, body: 'boom' }),
+  )
+  await page3.goto(`http://localhost:${PORT}/?debug`)
+  await page3.getByRole('button', { name: 'Explore' }).click()
+  const alert3 = page3.getByRole('alert')
+  check(
+    'a failing city download shows a friendly error (no crash)',
+    (await appears(alert3, 8000)) && /HTTP 500/.test((await alert3.textContent()) ?? ''),
+  )
+  await page3.getByRole('button', { name: 'Play Demo Town instead' }).click()
+  await page3.waitForFunction(() => window.__wildcity?.session?.city.metadata.id === 'demo', null, {
+    timeout: 30000,
+  })
+  check('can recover by playing the demo town', true)
+  await page3.close()
+
+  const page4 = await browser.newPage({ viewport: { width: 1280, height: 720 } })
+  await page4.route('**/cities/hyderabad/**', (route) => route.abort())
+  await page4.goto(`http://localhost:${PORT}/?debug`)
+  await page4.getByRole('button', { name: 'Explore' }).click()
+  const alert4 = page4.getByRole('alert')
+  check(
+    'offline / network failure shows a connection error',
+    (await appears(alert4, 8000)) && /connection/i.test((await alert4.textContent()) ?? ''),
+  )
+  await page4.getByRole('button', { name: 'Try again' }).isVisible()
+  await page4.close()
 
   check('no console/page errors', errors.length === 0, errors.slice(0, 3).join(' | '))
   void PHASE

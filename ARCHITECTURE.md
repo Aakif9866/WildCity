@@ -68,6 +68,19 @@ finds the nearest animal ~5x/s and pushes only changes to Zustand (`promptAnimal
 `followAnimalId`, `observedId`); UI panels sample live animal values at 4 Hz. Follow mode simply
 swaps the camera target from the player to the animal in `PlayerController`.
 
+## City data pipeline (Phase 7)
+
+```
+Overpass API --(npm run city, build time)--> data/raw/<id>.json (git-ignored cache)
+   -> convertOverpass (src/cities/osm)      pure + unit-tested
+   -> public/cities/<id>/{metadata,roads,buildings,zones}.json  + public/cities/index.json
+   -> runtime: loadCity -> parseCityData (validate) -> createSession -> World/NavGrid/animals
+```
+
+Adding a city = run the script with new coordinates; no engine change. Runtime errors are typed
+(`CityLoadError`, `CityDataError`) and surface as a friendly menu message with recovery options.
+OSM data is (c) OpenStreetMap contributors, ODbL: `metadata.attribution` is displayed in-game.
+
 ## Key decisions
 
 - **Simulation outside React.** Per-frame state (player, animals) lives in plain modules/refs and is

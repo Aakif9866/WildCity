@@ -23,6 +23,9 @@ export interface CityMetadata {
   /** Playable area is a square of side 2 * halfSize metres. */
   halfSize: number
   spawn: { x: number; z: number; yaw: number }
+  /** Data licence credit that must be shown to players (OSM's ODbL requires it). */
+  attribution?: string
+  description?: string
 }
 
 export interface Building {

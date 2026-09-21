@@ -1,0 +1,12 @@
+[
+  {
+    "id": "hyderabad",
+    "name": "Hyderabad",
+    "country": "India",
+    "center": {
+      "lat": 17.423,
+      "lon": 78.464
+    },
+    "description": "Necklace Road: the Hussain Sagar lakeshore, parks and city blocks"
+  }
+]

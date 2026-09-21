@@ -1,7 +1,5 @@
 import { Canvas } from '@react-three/fiber'
-import { useMemo } from 'react'
-import { generateDemoCity } from '@/cities/demo'
-import { createSession } from '@/game/session'
+import type { GameSession } from '@/game/session'
 import { AnimalMarker } from '@/render/animals/AnimalMarker'
 import { Animals } from '@/render/animals/Animals'
 import { DebugProbe } from '@/render/DebugProbe'
@@ -16,8 +14,7 @@ import { Hud } from '@/ui/Hud'
 import { InteractPrompt } from '@/ui/InteractPrompt'
 import { PauseMenu } from '@/ui/PauseMenu'
 
-export function GameCanvas() {
-  const session = useMemo(() => createSession(generateDemoCity()), [])
+export function GameCanvas({ session, onQuit }: { session: GameSession; onQuit: () => void }) {
   const phase = useAppStore((s) => s.phase)
 
   return (
@@ -36,11 +33,11 @@ export function GameCanvas() {
         <PlayerController session={session} />
         <DebugProbe session={session} />
       </Canvas>
-      <Hud />
+      <Hud session={session} />
       <InteractPrompt session={session} />
       <FollowBanner session={session} />
       <AnimalPanel session={session} />
-      {phase === 'paused' && <PauseMenu session={session} />}
+      {phase === 'paused' && <PauseMenu session={session} onQuit={onQuit} />}
     </>
   )
 }

@@ -2,6 +2,9 @@
   "id": "hyderabad",
   "name": "Hyderabad",
   "country": "India",
-  "center": { "lat": 17.385, "lon": 78.4867 },
-  "note": "Placeholder. Real area bounds and data files arrive in Phase 7."
+  "center": { "lat": 17.423, "lon": 78.464 },
+  "halfSize": 350,
+  "spawn": { "x": -4.025441462992119, "z": -12.350897503692746, "yaw": 0 },
+  "attribution": "© OpenStreetMap contributors (ODbL)",
+  "description": "Necklace Road: the Hussain Sagar lakeshore, parks and city blocks"
 }

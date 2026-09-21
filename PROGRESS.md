@@ -67,18 +67,32 @@
   - Follow mode: camera tracks the animal, F or any movement stops it; panel auto-closes when far away
   - 104 unit tests; smoke drives the whole flow in Chrome
 
+- **Phase 7 — Real city data** (branch `phase-7-real-city-data`)
+  - Build-time pipeline `npm run city`: Overpass (mirror failover + retries + local raw cache) ->
+    `convertOverpass` (projection to local metres, tag classification, multipolygon ring stitching,
+    Douglas-Peucker simplification, clipping to the play square, heights/widths, park tree scatter,
+    mid-road spawn) -> static JSON in `public/cities/<id>/`. The game never calls Overpass at runtime.
+  - Hyderabad (Necklace Road / Hussain Sagar shore, 700 m square): 188 buildings, 92 roads, 8 parks,
+    lake, 113 trees; ~40 KB of JSON
+  - Runtime: strict `parseCityData` (bad features skipped with warnings, unusable data rejected),
+    `loadCity` with timeouts, HTTP/JSON/offline errors, id sanitising
+  - Loading screen with progress; menu error panel with Try again / Play Demo Town; `?city=` deep link
+  - OSM attribution (ODbL) shown in-game
+  - 146 unit tests; smoke covers real-city load, collisions, animals, HTTP-500 and offline recovery
+
 ## In progress
 
 Nothing.
 
 ## Next
 
-- Phase 7 — real city data: OSM (Overpass) -> local coordinates -> simplified geometry for Hyderabad
+- Phase 8 — city selector (search/select, metadata, multiple cities)
 
 ## Known issues
 
 - React pinned to 19.2.x due to R3F peer range (see ARCHITECTURE.md).
 - Cloudflare Pages not yet connected (needs the user's Cloudflare account).
+- Multipolygon holes (courtyards, lake islands) are ignored by the OSM converter; only outer rings are used.
 - Trees have no collision (player and animals walk through them); the camera can sit inside a canopy.
 - Dog GLB is generated from the same box rig (looks identical to the fallback); real art can replace it.
 - Three.js logs a deprecation for `THREE.Clock` (from R3F internals) - harmless.

@@ -31,6 +31,18 @@ npm run dev                  # http://localhost:5173
 | `npm run format`  | Prettier (write)             |
 | `npm test`        | Vitest                       |
 
+## Adding a city
+
+```bash
+npm run city -- --id mumbai --name Mumbai --country India --lat 19.076 --lon 72.8777 --half 350 \
+  --desc "Short blurb shown in the city list"
+```
+
+Downloads OpenStreetMap data for a square of `2 * half` metres, converts it, and writes
+`public/cities/<id>/` plus the city index. Re-run with `--refresh` to re-download (the raw
+download is cached in `data/raw/`). Pick an area with a mix of buildings, green space and water.
+Map data (c) OpenStreetMap contributors (ODbL).
+
 ## Deployment (Cloudflare Pages)
 
 Connect the GitHub repo in Cloudflare Pages with: build command `npm run build`, output directory
