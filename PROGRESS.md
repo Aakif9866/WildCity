@@ -113,9 +113,21 @@
 - Phase 10: the browser smoke checks for it (menu paints without the 3D chunks, prefetch, `?stats`, F3)
   are written but **have not been run**, and the full smoke has not been re-run since the Suspense fix.
 
+## Deployed
+
+- **Live at https://wildcity.pages.dev** (Cloudflare Pages), deployed via `wrangler pages deploy`
+  from the `phase-10-optimization` branch (commit with the start-script/preview-host changes).
+  Verified in real Chrome: Hyderabad loads (188 buildings, 22 animals), no console errors.
+  This is a one-off snapshot, not connected to GitHub — see README's Deployment section to wire up
+  auto-deploy on push instead.
+- Railway was tried first per request; blocked by the free-tier resource limit (4 services already
+  provisioned across two other projects on this account). Not resolved — deploy went to Cloudflare
+  Pages instead, as originally planned in this document.
+
 ## Next
 
-- Finish Phase 10 verification, then Phase 11 — production deployment and cross-browser testing
+- Finish Phase 10 verification, then Phase 11 — cross-browser testing, and optionally wire up
+  Cloudflare's GitHub auto-deploy so `main` merges go live without a manual `wrangler` command
 
 ## Known issues
 

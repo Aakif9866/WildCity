@@ -43,10 +43,27 @@ Downloads OpenStreetMap data for a square of `2 * half` metres, converts it, and
 download is cached in `data/raw/`). Pick an area with a mix of buildings, green space and water.
 Map data (c) OpenStreetMap contributors (ODbL).
 
-## Deployment (Cloudflare Pages)
+## Deployment
 
-Connect the GitHub repo in Cloudflare Pages with: build command `npm run build`, output directory
-`dist`, environment variable `NODE_VERSION=20.19.0`. Pushes to the main branch deploy automatically.
+**Live:** https://wildcity.pages.dev (Cloudflare Pages, currently a manual CLI deploy — see below).
+
+Deployed with Wrangler, since Railway's free-tier resource limit was already used up by other
+projects on this account:
+
+```bash
+npm run build
+npx wrangler pages deploy dist --project-name=wildcity --branch=main
+```
+
+This uploads whatever is in `dist/` right now; it does **not** watch the repo. Re-run it after any
+change you want live. To switch to auto-deploy on every push instead, connect the GitHub repo in
+the Cloudflare Pages dashboard: build command `npm run build`, output directory `dist`, environment
+variable `NODE_VERSION=20.19.0` — then pushes to `main` deploy on their own and the manual command
+above is no longer needed.
+
+An unused `npm start` (`vite preview`) is also wired up so the same `dist/` build can run on a
+Node host such as Railway if that's ever preferred; `vite.config.ts` sets `preview.allowedHosts`
+so it works behind a reverse proxy.
 
 ## Conventions
 
