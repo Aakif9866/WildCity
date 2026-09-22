@@ -15,5 +15,8 @@ export default defineConfig({
     },
     chunkSizeWarningLimit: 900,
   },
+  // `npm start` runs `vite preview` behind Railway's proxy: it forwards an arbitrary public
+  // hostname, which Vite's preview server rejects by default (DNS-rebinding protection).
+  preview: { host: true, allowedHosts: true },
   test: { environment: 'node', include: ['src/**/*.test.ts'] },
 })
